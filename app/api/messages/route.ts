@@ -12,25 +12,39 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  const body = await request.json()
+  let body: { conversationId?: unknown; role?: unknown; content?: unknown }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'invalid_json' }, { status: 400 })
+  }
   const { conversationId, role, content } = body
+
+  // Validate conversationId is a UUID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!conversationId || typeof conversationId !== 'string' || !uuidRegex.test(conversationId)) {
+    return NextResponse.json({ error: 'invalid_conversation_id' }, { status: 400 })
+  }
 
   if (!conversationId || !role || !content) {
     return NextResponse.json({ error: 'missing_fields' }, { status: 400 })
   }
 
-  if (!['user', 'assistant'].includes(role)) {
+  const roleStr = role as string
+  const contentStr = content as string
+
+  if (!['user', 'assistant'].includes(roleStr)) {
     return NextResponse.json({ error: 'invalid_role' }, { status: 400 })
   }
 
-  if (content.length > MAX_CONTENT_LENGTH) {
+  if (contentStr.length > MAX_CONTENT_LENGTH) {
     return NextResponse.json({ error: 'content_too_long' }, { status: 400 })
   }
 
   // Insert message (RLS ensures conversation belongs to user)
   const { data: message, error: msgError } = await supabase
     .from('messages')
-    .insert({ conversation_id: conversationId, role, content })
+    .insert({ conversation_id: conversationId, role: roleStr, content: contentStr })
     .select('id, created_at')
     .single()
 
@@ -39,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Set conversation title from first user message
-  if (role === 'user') {
+  if (roleStr === 'user') {
     const { count } = await supabase
       .from('messages')
       .select('id', { count: 'exact', head: true })
@@ -47,9 +61,9 @@ export async function POST(request: NextRequest) {
       .eq('role', 'user')
 
     if (count === 1) {
-      const title = content.length > 60
-        ? content.slice(0, 60).trimEnd() + '...'
-        : content.trim()
+      const title = contentStr.length > 60
+        ? contentStr.slice(0, 60).trimEnd() + '...'
+        : contentStr.trim()
 
       await supabase
         .from('conversations')

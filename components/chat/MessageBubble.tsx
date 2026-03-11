@@ -1,3 +1,4 @@
+'use client'
 // components/chat/MessageBubble.tsx
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
@@ -33,7 +34,7 @@ export function MessageBubble({ message }: Props) {
         ) : (
           <div className="text-foreground text-sm prose prose-invert prose-sm max-w-none">
             <ReactMarkdown
-              rehypePlugins={[rehypeSanitize, rehypeHighlight]}
+              rehypePlugins={[rehypeHighlight, rehypeSanitize]}
             >
               {message.content}
             </ReactMarkdown>

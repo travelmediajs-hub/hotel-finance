@@ -67,9 +67,9 @@ export function Sidebar({ conversations, userEmail }: Props) {
 
       {/* User footer */}
       <div className="p-3 flex items-center gap-3">
-        <Avatar size="sm">
+        <Avatar className="h-7 w-7">
           <AvatarFallback className="bg-secondary text-muted-foreground text-xs">
-            {userEmail[0].toUpperCase()}
+            {userEmail[0]?.toUpperCase() ?? '?'}
           </AvatarFallback>
         </Avatar>
         <span className="flex-1 text-xs text-muted-foreground truncate">{userEmail}</span>
