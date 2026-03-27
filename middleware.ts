@@ -27,7 +27,8 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isProtected = request.nextUrl.pathname.startsWith('/chat')
+  const isProtected = request.nextUrl.pathname.startsWith('/chat') ||
+                      request.nextUrl.pathname.startsWith('/finance')
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
                      request.nextUrl.pathname.startsWith('/register')
 
@@ -43,5 +44,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/chat/:path*', '/login', '/register'],
+  matcher: ['/chat/:path*', '/finance/:path*', '/login', '/register'],
 }
