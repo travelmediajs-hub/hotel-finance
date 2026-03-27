@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/finance/auth'
 import { PropertyForm } from '@/components/finance/PropertyForm'
 import { DepartmentList } from '@/components/finance/DepartmentList'
+import { DeviceList } from '@/components/finance/DeviceList'
+import { TerminalList } from '@/components/finance/TerminalList'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { Property, Department, FiscalDevice, POSTerminal } from '@/types/finance'
 
@@ -61,19 +63,11 @@ export default async function PropertyDetailPage({ params }: Props) {
         </TabsContent>
 
         <TabsContent value="devices" className="mt-4">
-          <p className="text-sm text-muted-foreground">
-            {(devices?.length ?? 0) === 0
-              ? 'Няма добавени фискални устройства.'
-              : `${devices!.length} устройство(а)`}
-          </p>
+          <DeviceList propertyId={id} devices={(devices as FiscalDevice[]) ?? []} />
         </TabsContent>
 
         <TabsContent value="terminals" className="mt-4">
-          <p className="text-sm text-muted-foreground">
-            {(terminals?.length ?? 0) === 0
-              ? 'Няма добавени ПОС терминали.'
-              : `${terminals!.length} терминал(а)`}
-          </p>
+          <TerminalList propertyId={id} terminals={(terminals as POSTerminal[]) ?? []} />
         </TabsContent>
       </Tabs>
     </div>
