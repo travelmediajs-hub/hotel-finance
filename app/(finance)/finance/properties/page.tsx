@@ -3,10 +3,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/finance/auth'
 import { PropertyList } from '@/components/finance/PropertyList'
-import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { Property } from '@/types/finance'
 
 export default async function PropertiesPage() {
@@ -26,9 +24,9 @@ export default async function PropertiesPage() {
           <CardTitle className="text-lg">Обекти</CardTitle>
           <Link
             href="/finance/properties/new"
-            className={cn(buttonVariants({ size: 'sm' }))}
+            className="group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-[0.8rem] font-medium whitespace-nowrap transition-all outline-none select-none bg-primary text-primary-foreground hover:bg-primary/80 h-7 gap-1 rounded-[min(var(--radius-md),12px)] px-2.5"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-3.5 w-3.5" />
             Нов обект
           </Link>
         </CardHeader>

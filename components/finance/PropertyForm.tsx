@@ -42,6 +42,9 @@ export function PropertyForm({ property }: Props) {
   const isEdit = !!property
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [type, setType] = useState(property?.type ?? '')
+  const [category, setCategory] = useState(property?.category ?? '')
+  const [status, setStatus] = useState(property?.status ?? 'ACTIVE')
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -57,6 +60,11 @@ export function PropertyForm({ property }: Props) {
       }
     }
 
+    // Select values are tracked via state (base-ui Select doesn't set FormData)
+    if (type) body.type = type
+    if (category) body.category = category
+    if (isEdit && status) body.status = status
+
     try {
       const url = isEdit
         ? `/api/finance/properties/${property.id}`
@@ -71,7 +79,12 @@ export function PropertyForm({ property }: Props) {
 
       if (!res.ok) {
         const data = await res.json()
-        setError(data.message ?? data.error ?? 'Грешка при запис')
+        const details = data.details?.fieldErrors
+          ? Object.entries(data.details.fieldErrors)
+              .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
+              .join(' | ')
+          : null
+        setError(details ?? data.message ?? data.error ?? 'Грешка при запис')
         return
       }
 
@@ -111,7 +124,7 @@ export function PropertyForm({ property }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="type">Тип *</Label>
-              <Select name="type" required defaultValue={property?.type ?? ''}>
+              <Select value={type} onValueChange={(v) => v && setType(v)}>
                 <SelectTrigger><SelectValue placeholder="Избери тип" /></SelectTrigger>
                 <SelectContent>
                   {propertyTypes.map(t => (
@@ -123,7 +136,7 @@ export function PropertyForm({ property }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="category">Категория *</Label>
-              <Select name="category" required defaultValue={property?.category ?? ''}>
+              <Select value={category} onValueChange={(v) => v && setCategory(v)}>
                 <SelectTrigger><SelectValue placeholder="Избери категория" /></SelectTrigger>
                 <SelectContent>
                   {categoryOptions.map(c => (
@@ -200,7 +213,7 @@ export function PropertyForm({ property }: Props) {
             {isEdit && (
               <div className="space-y-2">
                 <Label htmlFor="status">Статус</Label>
-                <Select name="status" defaultValue={property?.status ?? 'ACTIVE'}>
+                <Select value={status} onValueChange={(v) => v && setStatus(v as 'ACTIVE' | 'INACTIVE')}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {statusOptions.map(s => (

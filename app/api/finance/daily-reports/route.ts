@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
     (sum, e) => sum + (e.amount - e.return_amount),
     0
   )
-  const cashDiff = z_report.cash_amount - totalCashNet
-  const posDiff = z_report.pos_amount - totalPOSNet
+  const cashDiff = totalCashNet - z_report.cash_amount
+  const posDiff = totalPOSNet - z_report.pos_amount
   const totalDiff = cashDiff + posDiff
 
   // Insert report
