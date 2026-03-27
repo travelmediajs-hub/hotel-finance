@@ -167,6 +167,7 @@ CREATE TABLE daily_reports (
   pos_diff decimal(12,2) NOT NULL DEFAULT 0,
   total_diff decimal(12,2) NOT NULL DEFAULT 0,
   diff_explanation text,
+  consolidation_id uuid REFERENCES property_consolidations(id),
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (department_id, date)
@@ -174,6 +175,7 @@ CREATE TABLE daily_reports (
 
 CREATE INDEX idx_daily_reports_property_date ON daily_reports (property_id, date);
 CREATE INDEX idx_daily_reports_status ON daily_reports (status);
+CREATE INDEX idx_daily_reports_consolidation ON daily_reports (consolidation_id) WHERE consolidation_id IS NOT NULL;
 
 CREATE TABLE daily_report_lines (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -426,7 +428,12 @@ ALTER TABLE money_received
 -- Calculated balance views
 CREATE VIEW bank_account_balances AS
 SELECT
-  ba.id, ba.name, ba.iban, ba.currency, ba.opening_balance,
+  ba.id,
+  ba.name,
+  ba.iban,
+  ba.currency,
+  ba.status,
+  ba.opening_balance,
   COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'IN'), 0) AS total_income,
   COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'OUT'), 0) AS total_expense,
   ba.opening_balance
@@ -438,27 +445,71 @@ GROUP BY ba.id;
 
 CREATE VIEW revolving_credit_balances AS
 SELECT
-  rc.id, rc.name, rc.credit_limit,
+  rc.id,
+  rc.name,
+  rc.credit_limit,
+  rc.interest_rate,
   COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'OUT' AND bt.type = 'OUT_REVOLV'), 0)
     - COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'IN' AND bt.type = 'OUT_REVOLV'), 0)
     AS used_amount,
   rc.credit_limit - (
     COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'OUT' AND bt.type = 'OUT_REVOLV'), 0)
     - COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'IN' AND bt.type = 'OUT_REVOLV'), 0)
-  ) AS available_limit
+  ) AS available_limit,
+  -- estimatedMonthlyInterest = usedAmount * rate / 12
+  (COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'OUT' AND bt.type = 'OUT_REVOLV'), 0)
+    - COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'IN' AND bt.type = 'OUT_REVOLV'), 0)
+  ) * rc.interest_rate / 100.0 / 12.0 AS estimated_monthly_interest
 FROM revolving_credits rc
 LEFT JOIN bank_transactions bt ON bt.bank_account_id = rc.bank_account_id
 GROUP BY rc.id;
 
 CREATE VIEW loan_balances AS
 SELECT
-  l.id, l.name, l.principal_amount,
+  l.id,
+  l.name,
+  l.principal_amount,
+  l.monthly_payment,
+  l.payment_day,
+  l.last_payment_date,
   COALESCE(SUM(bt.amount) FILTER (WHERE bt.type = 'OUT_CREDIT'), 0) AS paid_principal,
   l.principal_amount
-    - COALESCE(SUM(bt.amount) FILTER (WHERE bt.type = 'OUT_CREDIT'), 0) AS remaining_principal
+    - COALESCE(SUM(bt.amount) FILTER (WHERE bt.type = 'OUT_CREDIT'), 0) AS remaining_principal,
+  -- remainingPayments = ceil(remaining / monthly)
+  CASE WHEN l.monthly_payment > 0 THEN
+    CEIL((l.principal_amount - COALESCE(SUM(bt.amount) FILTER (WHERE bt.type = 'OUT_CREDIT'), 0))
+         / l.monthly_payment)::int
+  ELSE 0 END AS remaining_payments,
+  -- nextPaymentDate = next occurrence of payment_day
+  CASE WHEN l.status = 'ACTIVE' THEN
+    CASE WHEN EXTRACT(DAY FROM CURRENT_DATE) < l.payment_day
+      THEN DATE_TRUNC('month', CURRENT_DATE) + (l.payment_day - 1) * INTERVAL '1 day'
+      ELSE DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '1 month' + (l.payment_day - 1) * INTERVAL '1 day'
+    END
+  END AS next_payment_date,
+  CASE WHEN l.status = 'ACTIVE' THEN l.monthly_payment END AS next_payment_amount
 FROM loans l
 LEFT JOIN bank_transactions bt ON bt.loan_id = l.id
 GROUP BY l.id;
+
+-- Net cash position view (rule #15)
+-- = Banks + CO Cash + Property Cash - Unpaid expenses - Loan payments (30 days)
+CREATE VIEW net_cash_position AS
+SELECT
+  (SELECT COALESCE(SUM(current_balance), 0) FROM bank_account_balances) AS total_bank_balance,
+  (SELECT COALESCE(SUM(opening_balance), 0) FROM co_cash) AS co_cash_balance,
+  (SELECT COALESCE(SUM(dr.total_cash_net), 0)
+   FROM daily_reports dr
+   WHERE dr.status IN ('APPROVED', 'CORRECTED')
+     AND dr.date >= CURRENT_DATE - INTERVAL '30 days') AS property_cash_estimate,
+  (SELECT COALESCE(SUM(e.remaining_amount), 0)
+   FROM expenses e
+   WHERE e.status IN ('UNPAID', 'SENT_TO_CO')) AS unpaid_obligations,
+  (SELECT COALESCE(SUM(l.monthly_payment), 0)
+   FROM loans l
+   WHERE l.status = 'ACTIVE'
+     AND l.payment_day BETWEEN EXTRACT(DAY FROM CURRENT_DATE)
+     AND EXTRACT(DAY FROM CURRENT_DATE + INTERVAL '30 days')) AS loan_payments_30d;
 ```
 
 ### 3.5 Withdrawals, InTransit, TransactionChain
@@ -623,12 +674,17 @@ CREATE INDEX idx_income_entries_pl ON income_entries (property_id, entry_date)
 CREATE INDEX idx_income_entries_advances ON income_entries (status)
   WHERE type = 'INC_ADV' AND status = 'ADVANCE';
 
+-- audit_logs.changed_fields JSON schema:
+-- For CREATE: { "field": { "old": null, "new": value } }
+-- For UPDATE/STATUS_CHANGE: { "field": { "old": previous, "new": current } }
+-- For VOID: { "void_reason": { "old": null, "new": "reason" } }
+-- This satisfies spec rule #13 (userId, timestamp, oldValue, newValue)
 CREATE TABLE audit_logs (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   entity_type text NOT NULL,
   entity_id uuid NOT NULL,
   action text NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'STATUS_CHANGE', 'VOID')),
-  changed_fields jsonb,
+  changed_fields jsonb NOT NULL DEFAULT '{}',
   user_id uuid NOT NULL REFERENCES user_profiles(id),
   ip_address inet,
   user_agent text,
@@ -663,6 +719,135 @@ CREATE TABLE notifications (
 CREATE INDEX idx_notifications_recipient ON notifications (recipient_id, is_read, created_at DESC);
 CREATE INDEX idx_notifications_unread ON notifications (recipient_id, created_at DESC)
   WHERE is_read = false;
+```
+
+### 3.7 Row-Level Security Policies
+
+```sql
+-- Enable RLS on all tables
+ALTER TABLE properties ENABLE ROW LEVEL SECURITY;
+ALTER TABLE departments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE daily_report_lines ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pos_entries ENABLE ROW LEVEL SECURITY;
+ALTER TABLE z_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE property_consolidations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cash_collections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE money_received ENABLE ROW LEVEL SECURITY;
+ALTER TABLE withdrawals ENABLE ROW LEVEL SECURITY;
+
+-- Helper function: get user role
+CREATE OR REPLACE FUNCTION auth.user_role()
+RETURNS text AS $$
+  SELECT role FROM user_profiles WHERE id = auth.uid()
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- Helper function: check property access
+CREATE OR REPLACE FUNCTION auth.has_property_access(prop_id uuid)
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM user_property_access
+    WHERE user_id = auth.uid() AND property_id = prop_id
+  ) OR auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO')
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- Helper function: check department access
+CREATE OR REPLACE FUNCTION auth.has_department_access(dept_id uuid)
+RETURNS boolean AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM user_department_access
+    WHERE user_id = auth.uid() AND department_id = dept_id
+  ) OR auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO', 'MANAGER')
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
+-- Properties: CO sees all, others see only assigned
+CREATE POLICY properties_select ON properties FOR SELECT
+  USING (auth.has_property_access(id));
+
+-- Departments: CO sees all, managers see own property, dept heads see own dept
+CREATE POLICY departments_select ON departments FOR SELECT
+  USING (auth.has_property_access(property_id));
+
+-- Daily reports: dept heads see own dept, managers see own property, CO sees all
+CREATE POLICY daily_reports_select ON daily_reports FOR SELECT
+  USING (auth.has_property_access(property_id));
+CREATE POLICY daily_reports_insert ON daily_reports FOR INSERT
+  WITH CHECK (auth.has_department_access(department_id) AND auth.user_role() = 'DEPT_HEAD');
+CREATE POLICY daily_reports_update ON daily_reports FOR UPDATE
+  USING (auth.has_property_access(property_id));
+
+-- Daily report lines: follow parent report access
+CREATE POLICY daily_report_lines_select ON daily_report_lines FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM daily_reports dr
+    WHERE dr.id = daily_report_id AND auth.has_property_access(dr.property_id)
+  ));
+
+-- POS entries: follow parent report access
+CREATE POLICY pos_entries_select ON pos_entries FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM daily_reports dr
+    WHERE dr.id = daily_report_id AND auth.has_property_access(dr.property_id)
+  ));
+
+-- Z-reports: follow parent report access
+CREATE POLICY z_reports_select ON z_reports FOR SELECT
+  USING (EXISTS (
+    SELECT 1 FROM daily_reports dr
+    WHERE dr.id = daily_report_id AND auth.has_property_access(dr.property_id)
+  ));
+
+-- Consolidations: managers see own property, CO sees all
+CREATE POLICY consolidations_select ON property_consolidations FOR SELECT
+  USING (auth.has_property_access(property_id));
+
+-- Expenses: managers see own property, CO sees all
+CREATE POLICY expenses_select ON expenses FOR SELECT
+  USING (auth.has_property_access(property_id));
+CREATE POLICY expenses_insert ON expenses FOR INSERT
+  WITH CHECK (auth.has_property_access(property_id) AND auth.user_role() = 'MANAGER');
+
+-- Cash collections: CO creates, manager confirms
+CREATE POLICY cash_collections_select ON cash_collections FOR SELECT
+  USING (auth.has_property_access(property_id));
+CREATE POLICY cash_collections_insert ON cash_collections FOR INSERT
+  WITH CHECK (auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO'));
+
+-- Money received: CO creates, manager confirms
+CREATE POLICY money_received_select ON money_received FOR SELECT
+  USING (auth.has_property_access(property_id));
+CREATE POLICY money_received_insert ON money_received FOR INSERT
+  WITH CHECK (auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO'));
+
+-- Withdrawals: property staff creates, CO approves
+CREATE POLICY withdrawals_select ON withdrawals FOR SELECT
+  USING (auth.has_property_access(property_id));
+CREATE POLICY withdrawals_insert ON withdrawals FOR INSERT
+  WITH CHECK (auth.has_property_access(property_id));
+
+-- Bank tables: CO only
+ALTER TABLE bank_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bank_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE loans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE revolving_credits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE income_entries ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY bank_accounts_co ON bank_accounts FOR ALL
+  USING (auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO'));
+CREATE POLICY bank_transactions_co ON bank_transactions FOR ALL
+  USING (auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO'));
+CREATE POLICY loans_co ON loans FOR ALL
+  USING (auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO'));
+CREATE POLICY revolving_credits_co ON revolving_credits FOR ALL
+  USING (auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO'));
+CREATE POLICY income_entries_co ON income_entries FOR ALL
+  USING (auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO'));
+
+-- Notifications: users see only their own
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY notifications_own ON notifications FOR SELECT
+  USING (recipient_id = auth.uid());
 ```
 
 ---
@@ -704,20 +889,35 @@ CREATE INDEX idx_notifications_unread ON notifications (recipient_id, created_at
 | V1 | `bank_account_balances` | 3.4 | View |
 | V2 | `revolving_credit_balances` | 3.4 | View |
 | V3 | `loan_balances` | 3.4 | View |
+| V4 | `net_cash_position` | 3.4 | View |
 
-## 5. Business Rules Enforced at DB Level
+### Spec entities deliberately omitted
 
-| # | Rule | Mechanism |
-|---|------|-----------|
-| 1 | One report per dept/date | `UNIQUE (department_id, date)` |
-| 2 | Z-report file required | `attachment_url NOT NULL` |
-| 7 | Withdrawals non-deletable | `is_void` flag instead of DELETE |
-| 8 | One open in-transit per person | Partial unique index |
-| 9 | CF_CREDIT/CF_TRANSFER ≠ P&L | Partial index for P&L queries |
-| 10 | Bank balance = opening + IN - OUT | View `bank_account_balances` |
-| 11 | Consolidation only when all CONFIRMED | App-layer validation |
-| 12 | Row-level security | `user_property_access` + `user_department_access` + RLS policies |
-| 13 | Every change audited | `audit_logs` table |
+| Spec Entity | Rationale |
+|-------------|-----------|
+| **Company** (#1) | Single-tenant system — company info stored as env vars / app config, not a DB entity. If multi-tenant needed later, add table then. |
+| **CentralOffice** (#2) | CO users identified by role (`ADMIN_CO`, `FINANCE_CO`) in `user_profiles`. No separate config needed — CO address/contact lives in app config. |
+| **MonthlyView** (#13) | Pure read-only aggregate — built as a dynamic query in the API layer joining `daily_reports`, `cash_collections`, and `pos_entries` by property + month. No materialized table needed. |
+
+## 5. Business Rules Coverage
+
+| # | Rule | Level | Mechanism |
+|---|------|-------|-----------|
+| 1 | One report per dept/date | DB | `UNIQUE (department_id, date)` |
+| 2 | Z-report file required | DB | `attachment_url NOT NULL` |
+| 3 | diffExplanation required when totalDiff != 0 | App | Zod validation before status transition to SUBMITTED |
+| 4 | APPROVED report not editable | App | API route rejects updates when status IN (APPROVED, CORRECTED) |
+| 5 | Expense requires attachment (except EXPENSE_ORDER with note) | App | Zod validation before status transition to SENT_TO_CO |
+| 6 | Withdrawal above threshold needs pre-approval | App+DB | `withdrawal_thresholds` table + API validation |
+| 7 | Withdrawals non-deletable | DB | `is_void` flag instead of DELETE; no DELETE policy |
+| 8 | One open in-transit per person | DB | Partial unique index |
+| 9 | CF_CREDIT/CF_TRANSFER ≠ P&L | DB | Partial index for P&L queries; `net_cash_position` view excludes them |
+| 10 | Bank balance = opening + IN - OUT | DB | View `bank_account_balances` |
+| 11 | Consolidation only when all CONFIRMED | App | API checks all active dept reports are CONFIRMED before allowing SENT_TO_CO |
+| 12 | Row-level security | DB | RLS policies in section 3.7 using `user_property_access` + `user_department_access` |
+| 13 | Every change audited | App | `audit_logs` table; app writes JSON `{ field: { old, new } }` on every mutation |
+| 14 | INC_ADV stays ADVANCE until realized | App | Status CHECK allows ADVANCE/REALIZED; transition enforced in API |
+| 15 | Net cash position formula | DB | `net_cash_position` view in section 3.4 |
 
 ## 6. Design Decisions
 
@@ -728,6 +928,8 @@ CREATE INDEX idx_notifications_unread ON notifications (recipient_id, created_at
 5. **Deferred FKs** for circular dependencies (loans ↔ bank_transactions, money_received → bank_accounts)
 6. **`decimal(12,2)`** for property-level amounts, **`decimal(14,2)`** for bank/aggregate amounts
 7. **Soft delete** for withdrawals (`is_void` + correction record), hard delete nowhere
+8. **`in_transits.remaining_amount`** is app-maintained (not a generated column) because it depends on cross-table SUM of closed steps which PG generated columns cannot reference. App updates it transactionally when closing steps.
+9. **Currency**: spec says "EUR only" but `bank_accounts` and `in_transits` allow BGN/EUR/USD for forward compatibility with real-world bank accounts that may hold other currencies. All financial calculations and reporting are in EUR.
 
 ## 7. Workflow Status Machines
 
