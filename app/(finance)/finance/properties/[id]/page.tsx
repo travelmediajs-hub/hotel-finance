@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { requireRole } from '@/lib/finance/auth'
 import { PropertyForm } from '@/components/finance/PropertyForm'
+import { DepartmentList } from '@/components/finance/DepartmentList'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { Property, Department, FiscalDevice, POSTerminal } from '@/types/finance'
 
@@ -53,11 +54,10 @@ export default async function PropertyDetailPage({ params }: Props) {
         </TabsContent>
 
         <TabsContent value="departments" className="mt-4">
-          <p className="text-sm text-muted-foreground">
-            {(departments?.length ?? 0) === 0
-              ? 'Няма добавени отдели.'
-              : `${departments!.length} отдел(а)`}
-          </p>
+          <DepartmentList
+            propertyId={id}
+            departments={(departments as Department[]) ?? []}
+          />
         </TabsContent>
 
         <TabsContent value="devices" className="mt-4">
