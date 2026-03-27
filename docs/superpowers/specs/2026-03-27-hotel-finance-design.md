@@ -433,7 +433,6 @@ SELECT
   ba.iban,
   ba.currency,
   ba.status,
-  ba.opening_balance,
   COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'IN'), 0) AS total_income,
   COALESCE(SUM(bt.amount) FILTER (WHERE bt.direction = 'OUT'), 0) AS total_expense,
   ba.opening_balance
@@ -492,12 +491,26 @@ FROM loans l
 LEFT JOIN bank_transactions bt ON bt.loan_id = l.id
 GROUP BY l.id;
 
+-- CO cash dynamic balance: opening + collections received - money sent out
+CREATE VIEW co_cash_balances AS
+SELECT
+  cc.id,
+  cc.name,
+  cc.opening_balance,
+  cc.opening_balance
+    + COALESCE((SELECT SUM(amount) FROM cash_collections
+                WHERE status = 'ACCOUNTED'), 0)
+    - COALESCE((SELECT SUM(amount) FROM money_received
+                WHERE source_type = 'CO_CASH' AND status IN ('SENT', 'RECEIVED', 'ACCOUNTED')), 0)
+    AS current_balance
+FROM co_cash cc;
+
 -- Net cash position view (rule #15)
 -- = Banks + CO Cash + Property Cash - Unpaid expenses - Loan payments (30 days)
 CREATE VIEW net_cash_position AS
 SELECT
   (SELECT COALESCE(SUM(current_balance), 0) FROM bank_account_balances) AS total_bank_balance,
-  (SELECT COALESCE(SUM(opening_balance), 0) FROM co_cash) AS co_cash_balance,
+  (SELECT COALESCE(SUM(current_balance), 0) FROM co_cash_balances) AS co_cash_balance,
   (SELECT COALESCE(SUM(dr.total_cash_net), 0)
    FROM daily_reports dr
    WHERE dr.status IN ('APPROVED', 'CORRECTED')
@@ -505,11 +518,10 @@ SELECT
   (SELECT COALESCE(SUM(e.remaining_amount), 0)
    FROM expenses e
    WHERE e.status IN ('UNPAID', 'SENT_TO_CO')) AS unpaid_obligations,
-  (SELECT COALESCE(SUM(l.monthly_payment), 0)
-   FROM loans l
-   WHERE l.status = 'ACTIVE'
-     AND l.payment_day BETWEEN EXTRACT(DAY FROM CURRENT_DATE)
-     AND EXTRACT(DAY FROM CURRENT_DATE + INTERVAL '30 days')) AS loan_payments_30d;
+  (SELECT COALESCE(SUM(lb.next_payment_amount), 0)
+   FROM loan_balances lb
+   WHERE lb.next_payment_date IS NOT NULL
+     AND lb.next_payment_date <= CURRENT_DATE + INTERVAL '30 days') AS loan_payments_30d;
 ```
 
 ### 3.5 Withdrawals, InTransit, TransactionChain
@@ -753,12 +765,19 @@ RETURNS boolean AS $$
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- Helper function: check department access
+-- MANAGER gets access only to departments within their assigned properties
 CREATE OR REPLACE FUNCTION auth.has_department_access(dept_id uuid)
 RETURNS boolean AS $$
   SELECT EXISTS (
     SELECT 1 FROM user_department_access
     WHERE user_id = auth.uid() AND department_id = dept_id
-  ) OR auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO', 'MANAGER')
+  )
+  OR auth.user_role() IN ('ADMIN_CO', 'FINANCE_CO')
+  OR (auth.user_role() = 'MANAGER' AND EXISTS (
+    SELECT 1 FROM departments d
+    JOIN user_property_access upa ON upa.property_id = d.property_id
+    WHERE d.id = dept_id AND upa.user_id = auth.uid()
+  ))
 $$ LANGUAGE sql SECURITY DEFINER STABLE;
 
 -- Properties: CO sees all, others see only assigned
@@ -889,7 +908,8 @@ CREATE POLICY notifications_own ON notifications FOR SELECT
 | V1 | `bank_account_balances` | 3.4 | View |
 | V2 | `revolving_credit_balances` | 3.4 | View |
 | V3 | `loan_balances` | 3.4 | View |
-| V4 | `net_cash_position` | 3.4 | View |
+| V4 | `co_cash_balances` | 3.4 | View |
+| V5 | `net_cash_position` | 3.4 | View |
 
 ### Spec entities deliberately omitted
 
