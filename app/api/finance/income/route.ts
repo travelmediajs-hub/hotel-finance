@@ -15,11 +15,11 @@ export async function GET(request: NextRequest) {
   const propertyId = searchParams.get('property_id')
   const status = searchParams.get('status')
   const type = searchParams.get('type')
-  const incomeCategory = searchParams.get('income_category')
+  const accountId = searchParams.get('account_id')
 
   let query = supabase
     .from('income_entries')
-    .select('*, properties(name)')
+    .select('*, properties(name), usali_accounts(code, name)')
     .order('entry_date', { ascending: false })
     .limit(200)
 
@@ -45,8 +45,8 @@ export async function GET(request: NextRequest) {
   if (type) {
     query = query.eq('type', type)
   }
-  if (incomeCategory) {
-    query = query.eq('income_category', incomeCategory)
+  if (accountId) {
+    query = query.eq('account_id', accountId)
   }
 
   const { data, error } = await query

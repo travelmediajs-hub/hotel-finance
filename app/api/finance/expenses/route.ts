@@ -14,13 +14,13 @@ export async function GET(request: NextRequest) {
 
   const propertyId = searchParams.get('property_id')
   const status = searchParams.get('status')
-  const category = searchParams.get('category')
+  const accountId = searchParams.get('account_id')
   const dateFrom = searchParams.get('date_from')
   const dateTo = searchParams.get('date_to')
 
   let query = supabase
     .from('expenses')
-    .select('*, departments(name), properties(name)')
+    .select('*, departments(name), properties(name), usali_accounts(code, name)')
     .order('issue_date', { ascending: false })
     .limit(200)
 
@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
   if (status) {
     query = query.eq('status', status)
   }
-  if (category) {
-    query = query.eq('category', category)
+  if (accountId) {
+    query = query.eq('account_id', accountId)
   }
   if (dateFrom) {
     query = query.gte('issue_date', dateFrom)
