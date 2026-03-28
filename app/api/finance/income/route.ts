@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getFinanceUser, isCORole } from '@/lib/finance/auth'
+import { getFinanceUser, isCORole, getUserPropertyIds } from '@/lib/finance/auth'
 import { createIncomeEntrySchema } from '@/lib/finance/schemas'
 
 export async function GET(request: NextRequest) {
@@ -23,20 +23,15 @@ export async function GET(request: NextRequest) {
     .order('entry_date', { ascending: false })
     .limit(200)
 
-  if (!isCORole(user.role)) {
-    // MANAGER: scope to their accessible properties
+  const accessibleIds = await getUserPropertyIds(user)
+  if (accessibleIds !== null) {
     if (propertyId) {
       query = query.eq('property_id', propertyId)
     } else {
-      const { data: access } = await supabase
-        .from('user_property_access')
-        .select('property_id')
-        .eq('user_id', user.id)
-      const ids = (access ?? []).map((r: { property_id: string }) => r.property_id)
-      if (ids.length === 0) {
+      if (accessibleIds.length === 0) {
         return NextResponse.json([])
       }
-      query = query.in('property_id', ids)
+      query = query.in('property_id', accessibleIds)
     }
   } else {
     if (propertyId) {

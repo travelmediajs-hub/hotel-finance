@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { requireRole } from '@/lib/finance/auth'
+import { requireRole, getUserPropertyIds } from '@/lib/finance/auth'
 import { ExpenseForm } from '@/components/finance/ExpenseForm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
@@ -55,14 +55,8 @@ export default async function NewExpensePage({ searchParams }: Props) {
 
     propertyId = params.property_id
   } else {
-    // MANAGER: resolve property from user_property_access
-    const { data: accessRecords } = await supabase
-      .from('user_property_access')
-      .select('property_id')
-      .eq('user_id', user.id)
-      .limit(1)
-
-    if (!accessRecords || accessRecords.length === 0) {
+    const propertyIds = await getUserPropertyIds(user)
+    if (!propertyIds || propertyIds.length === 0) {
       return (
         <div className="p-6 max-w-4xl mx-auto">
           <p className="text-muted-foreground text-sm">
@@ -72,7 +66,7 @@ export default async function NewExpensePage({ searchParams }: Props) {
       )
     }
 
-    propertyId = accessRecords[0].property_id
+    propertyId = propertyIds[0]
   }
 
   // Fetch departments for the property

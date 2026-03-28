@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getFinanceUser } from '@/lib/finance/auth'
+import { getFinanceUser, getUserPropertyIds } from '@/lib/finance/auth'
 import { IncomeList } from '@/components/finance/IncomeList'
 import type { IncomeEntryWithJoins } from '@/components/finance/IncomeList'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,14 +19,8 @@ export default async function IncomePage() {
     .order('entry_date', { ascending: false })
     .limit(200)
 
-  if (user.role === 'MANAGER') {
-    // Filter by properties the manager has access to
-    const { data: accessRecords } = await supabase
-      .from('user_property_access')
-      .select('property_id')
-      .eq('user_id', user.id)
-
-    const propertyIds = (accessRecords ?? []).map(r => r.property_id)
+  const propertyIds = await getUserPropertyIds(user)
+  if (propertyIds !== null) {
     if (propertyIds.length > 0) {
       query = query.in('property_id', propertyIds)
     } else {

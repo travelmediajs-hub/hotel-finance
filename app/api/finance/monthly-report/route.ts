@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getFinanceUser, isCORole } from '@/lib/finance/auth'
+import { getFinanceUser, getUserPropertyIds } from '@/lib/finance/auth'
 
 // Validate UUID format
 function isUUID(value: string): boolean {
@@ -53,15 +53,9 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient()
 
   // For non-CO users, verify they have access to this property
-  if (!isCORole(user.role)) {
-    const { data: access } = await supabase
-      .from('user_property_access')
-      .select('property_id')
-      .eq('user_id', user.id)
-      .eq('property_id', propertyId)
-      .maybeSingle()
-
-    if (!access) {
+  const userPropertyIds = await getUserPropertyIds(user)
+  if (userPropertyIds !== null) {
+    if (!userPropertyIds.includes(propertyId)) {
       return NextResponse.json({ error: 'forbidden' }, { status: 403 })
     }
   }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getFinanceUser, isCORole } from '@/lib/finance/auth'
+import { getFinanceUser, getUserPropertyIds } from '@/lib/finance/auth'
 import { createPropertySchema } from '@/lib/finance/schemas'
 
 export async function GET() {
@@ -16,13 +16,8 @@ export async function GET() {
     .select('*')
     .order('name')
 
-  if (!isCORole(user.role)) {
-    const { data: access } = await supabase
-      .from('user_property_access')
-      .select('property_id')
-      .eq('user_id', user.id)
-
-    const propertyIds = access?.map(a => a.property_id) ?? []
+  const propertyIds = await getUserPropertyIds(user)
+  if (propertyIds !== null) {
     if (propertyIds.length === 0) {
       return NextResponse.json([])
     }

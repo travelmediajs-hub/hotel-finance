@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getFinanceUser, isCORole } from '@/lib/finance/auth'
+import { getFinanceUser, isCORole, getUserPropertyIds } from '@/lib/finance/auth'
 import { createCashCollectionSchema } from '@/lib/finance/schemas'
 
 export async function GET(request: NextRequest) {
@@ -21,20 +21,12 @@ export async function GET(request: NextRequest) {
     .order('collection_date', { ascending: false })
     .limit(200)
 
-  // MANAGER is scoped to their own properties via RLS (user_property_access)
-  // CO roles see everything — no additional filter needed
-  if (!isCORole(user.role)) {
-    // Non-CO users are scoped by RLS; additionally scope to accessible properties
-    const { data: accessRows } = await supabase
-      .from('user_property_access')
-      .select('property_id')
-      .eq('user_id', user.id)
-
-    const accessibleIds = (accessRows ?? []).map((r) => r.property_id)
-    if (accessibleIds.length === 0) {
+  const propertyIds = await getUserPropertyIds(user)
+  if (propertyIds !== null) {
+    if (propertyIds.length === 0) {
       return NextResponse.json([])
     }
-    query = query.in('property_id', accessibleIds)
+    query = query.in('property_id', propertyIds)
   }
 
   if (propertyId) {

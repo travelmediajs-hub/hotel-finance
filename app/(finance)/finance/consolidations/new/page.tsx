@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { requireRole } from '@/lib/finance/auth'
+import { requireRole, getUserPropertyIds } from '@/lib/finance/auth'
 import { ConsolidationNewForm } from '@/components/finance/ConsolidationNewForm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
@@ -75,14 +75,8 @@ export default async function NewConsolidationPage({ searchParams }: Props) {
     propertyId = property.id
     propertyName = property.name
   } else {
-    // MANAGER: resolve property from user_property_access
-    const { data: accessRecords } = await supabase
-      .from('user_property_access')
-      .select('property_id, properties(id, name)')
-      .eq('user_id', user.id)
-      .limit(1)
-
-    if (!accessRecords || accessRecords.length === 0) {
+    const propertyIds = await getUserPropertyIds(user)
+    if (!propertyIds || propertyIds.length === 0) {
       return (
         <div className="p-6 max-w-4xl mx-auto">
           <p className="text-muted-foreground text-sm">
@@ -92,9 +86,16 @@ export default async function NewConsolidationPage({ searchParams }: Props) {
       )
     }
 
-    const access = accessRecords[0] as any
-    propertyId = access.property_id
-    propertyName = access.properties?.name ?? '—'
+    propertyId = propertyIds[0]
+
+    // Fetch property name separately
+    const { data: property } = await supabase
+      .from('properties')
+      .select('name')
+      .eq('id', propertyId)
+      .single()
+
+    propertyName = property?.name ?? '—'
   }
 
   return (

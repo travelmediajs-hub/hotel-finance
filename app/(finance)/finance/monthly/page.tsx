@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getFinanceUser, isCORole } from '@/lib/finance/auth'
+import { getFinanceUser, getUserPropertyIds } from '@/lib/finance/auth'
 import { MonthlyReportView } from '@/components/finance/MonthlyReportView'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -16,15 +16,9 @@ export default async function MonthlyReportPage() {
     .eq('status', 'ACTIVE')
     .order('name')
 
-  if (!isCORole(user.role)) {
-    // MANAGER: only properties they have access to
-    const { data: accessRecords } = await supabase
-      .from('user_property_access')
-      .select('property_id')
-      .eq('user_id', user.id)
-
-    const ids = (accessRecords ?? []).map((r: { property_id: string }) => r.property_id)
-    if (ids.length === 0) {
+  const propertyIds = await getUserPropertyIds(user)
+  if (propertyIds !== null) {
+    if (propertyIds.length === 0) {
       return (
         <div className="p-6 max-w-5xl mx-auto">
           <Card>
@@ -38,7 +32,7 @@ export default async function MonthlyReportPage() {
         </div>
       )
     }
-    query = query.in('id', ids)
+    query = query.in('id', propertyIds)
   }
 
   const { data: properties } = await query
