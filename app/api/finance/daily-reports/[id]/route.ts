@@ -9,27 +9,19 @@ interface RouteParams {
 export async function GET(_request: NextRequest, { params }: RouteParams) {
   const { id } = await params
   const user = await getFinanceUser()
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const supabase = await createClient()
-  const { data, error } = await supabase
+
+  const { data: report, error } = await supabase
     .from('daily_reports')
-    .select(`
-      *,
-      departments(id, name),
-      properties(id, name),
-      daily_report_lines(*),
-      pos_entries(*, pos_terminals(tid, bank, location)),
-      z_reports(*)
-    `)
+    .select('*, properties(id, name), daily_report_lines(*, departments(id, name))')
     .eq('id', id)
     .single()
 
-  if (error || !data) {
+  if (error || !report) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  return NextResponse.json(data)
+  return NextResponse.json(report)
 }
