@@ -38,7 +38,6 @@ const paymentMethodOptions: { value: PaymentMethod; label: string }[] = [
 
 interface Props {
   propertyId: string
-  departments: { id: string; name: string }[]
   accounts: UsaliAccount[]
 }
 
@@ -46,12 +45,11 @@ function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function ExpenseForm({ propertyId, departments, accounts }: Props) {
+export function ExpenseForm({ propertyId, accounts }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
   const { isHidden } = useHiddenAccounts(propertyId)
 
-  const [departmentId, setDepartmentId] = useState('')
   const [accountId, setAccountId] = useState('')
   const [supplier, setSupplier] = useState('')
   const [supplierEik, setSupplierEik] = useState('')
@@ -72,7 +70,7 @@ export function ExpenseForm({ propertyId, departments, accounts }: Props) {
   async function handleSave(isDraft: boolean) {
     setError(null)
 
-    if (!departmentId || !accountId || !supplier || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet <= 0) {
+    if (!accountId || !supplier || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet <= 0) {
       setError('Моля, попълнете всички задължителни полета.')
       return
     }
@@ -86,7 +84,6 @@ export function ExpenseForm({ propertyId, departments, accounts }: Props) {
 
     const body = {
       property_id: propertyId,
-      department_id: departmentId,
       account_id: accountId,
       supplier,
       supplier_eik: supplierEik || null,
@@ -158,19 +155,6 @@ export function ExpenseForm({ propertyId, departments, accounts }: Props) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Отдел *</Label>
-              <Select value={departmentId} onValueChange={(v) => v && setDepartmentId(v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Избери отдел" />
-                </SelectTrigger>
-                <SelectContent>
-                  {departments.map(d => (
-                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
             <div className="space-y-2">
               <Label>Сметка (USALI) *</Label>
               <Select value={accountId} onValueChange={(v) => v && setAccountId(v)}>

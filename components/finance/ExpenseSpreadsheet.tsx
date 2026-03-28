@@ -62,7 +62,7 @@ function toDateString(d: Date): string {
 interface NewRowState {
   issue_date: string
   property_id: string
-  department_id: string
+
   account_id: string
   supplier: string
   document_type: string
@@ -74,7 +74,7 @@ interface NewRowState {
 interface NewRowErrors {
   issue_date?: boolean
   property_id?: boolean
-  department_id?: boolean
+
   account_id?: boolean
   supplier?: boolean
   document_type?: boolean
@@ -85,7 +85,6 @@ interface NewRowErrors {
 interface Props {
   expenses: ExpenseWithJoins[]
   properties: Array<{ id: string; name: string }>
-  departments: Array<{ id: string; name: string; property_id: string }>
   accounts: Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>
   userRole: string
   defaultPropertyId?: string
@@ -94,7 +93,6 @@ interface Props {
 export function ExpenseSpreadsheet({
   expenses: initialExpenses,
   properties,
-  departments,
   accounts,
   userRole,
   defaultPropertyId,
@@ -109,7 +107,6 @@ export function ExpenseSpreadsheet({
   const [newRow, setNewRow] = useState<NewRowState>({
     issue_date: today,
     property_id: defaultPropertyId ?? properties[0]?.id ?? '',
-    department_id: '',
     account_id: '',
     supplier: '',
     document_type: '',
@@ -122,18 +119,9 @@ export function ExpenseSpreadsheet({
   const [loading, setLoading] = useState(false)
   const { isHidden } = useHiddenAccounts(newRow.property_id || defaultPropertyId)
 
-  // Filtered departments based on selected property in new row
-  const availableDepts = departments.filter(
-    (d) => d.property_id === newRow.property_id
-  )
-
   function setField<K extends keyof NewRowState>(key: K, value: NewRowState[K]) {
     setNewRow((prev) => {
       const updated = { ...prev, [key]: value }
-      // Reset department when property changes
-      if (key === 'property_id') {
-        updated.department_id = ''
-      }
       return updated
     })
     setErrors((prev) => ({ ...prev, [key]: false }))
@@ -143,7 +131,6 @@ export function ExpenseSpreadsheet({
     const errs: NewRowErrors = {}
     if (!newRow.issue_date) errs.issue_date = true
     if (isCO && !newRow.property_id) errs.property_id = true
-    if (!newRow.department_id) errs.department_id = true
     if (!newRow.account_id) errs.account_id = true
     if (!newRow.supplier.trim()) errs.supplier = true
     if (!newRow.document_type) errs.document_type = true
@@ -163,7 +150,6 @@ export function ExpenseSpreadsheet({
 
     const body = {
       property_id: newRow.property_id || defaultPropertyId,
-      department_id: newRow.department_id,
       account_id: newRow.account_id,
       supplier: newRow.supplier.trim(),
       document_type: newRow.document_type,
@@ -209,10 +195,9 @@ export function ExpenseSpreadsheet({
 
       // Optimistically add new row to the table
       const property = properties.find((p) => p.id === (newRow.property_id || defaultPropertyId))
-      const department = departments.find((d) => d.id === newRow.department_id)
       const optimistic: ExpenseWithJoins = {
         ...saved,
-        departments: { name: department?.name ?? '' },
+        departments: { name: '' },
         properties: { name: property?.name ?? '' },
       }
       setExpenses((prev) => [optimistic, ...prev])
@@ -221,7 +206,6 @@ export function ExpenseSpreadsheet({
       setNewRow({
         issue_date: today,
         property_id: defaultPropertyId ?? properties[0]?.id ?? '',
-        department_id: '',
         account_id: '',
         supplier: '',
         document_type: '',
@@ -258,7 +242,6 @@ export function ExpenseSpreadsheet({
               {isCO && (
                 <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Обект</th>
               )}
-              <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Отдел</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Сметка</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Доставчик</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Документ</th>
@@ -273,7 +256,7 @@ export function ExpenseSpreadsheet({
             {expenses.length === 0 && !canCreate && (
               <tr>
                 <td
-                  colSpan={isCO ? 11 : 10}
+                  colSpan={isCO ? 10 : 9}
                   className="px-2 py-8 text-center text-muted-foreground"
                 >
                   Няма разходи
@@ -293,9 +276,6 @@ export function ExpenseSpreadsheet({
                     {expense.properties.name}
                   </td>
                 )}
-                <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
-                  {expense.departments.name}
-                </td>
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
                   {expense.usali_accounts ? `${expense.usali_accounts.code} ${expense.usali_accounts.name}` : '—'}
                 </td>
@@ -350,18 +330,6 @@ export function ExpenseSpreadsheet({
                     </select>
                   </td>
                 )}
-                <td className="px-1 py-1 min-w-[110px]">
-                  <select
-                    value={newRow.department_id}
-                    onChange={(e) => setField('department_id', e.target.value)}
-                    className={errors.department_id ? inputErrorClass : selectClass}
-                  >
-                    <option value="">Отдел</option>
-                    {availableDepts.map((d) => (
-                      <option key={d.id} value={d.id}>{d.name}</option>
-                    ))}
-                  </select>
-                </td>
                 <td className="px-1 py-1 min-w-[110px]">
                   <select
                     value={newRow.account_id}

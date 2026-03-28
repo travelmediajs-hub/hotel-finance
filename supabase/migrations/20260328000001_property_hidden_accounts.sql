@@ -19,3 +19,6 @@ CREATE POLICY "pha_select" ON property_hidden_accounts
 CREATE POLICY "pha_admin" ON property_hidden_accounts
   FOR ALL TO authenticated USING (public.user_role() = 'ADMIN_CO')
   WITH CHECK (public.user_role() = 'ADMIN_CO');
+
+-- Make department_id optional on expenses (USALI account provides department classification)
+ALTER TABLE expenses ALTER COLUMN department_id DROP NOT NULL;

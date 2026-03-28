@@ -49,21 +49,6 @@ export default async function ExpensesPage() {
     }
   }
 
-  // --- Departments ---
-  let deptQuery = supabase
-    .from('departments')
-    .select('id, name, property_id')
-    .eq('status', 'ACTIVE')
-    .order('name')
-
-  if (!isCORole(user.role) && defaultPropertyId) {
-    deptQuery = deptQuery.eq('property_id', defaultPropertyId)
-  } else if (!isCORole(user.role) && properties.length > 0) {
-    deptQuery = deptQuery.in('property_id', properties.map((p) => p.id))
-  }
-
-  const { data: departments } = await deptQuery
-
   const { data: accounts } = await supabase
     .from('usali_accounts')
     .select('id, code, name, level, account_type, parent_id')
@@ -82,7 +67,6 @@ export default async function ExpensesPage() {
             <ExpenseSpreadsheet
               expenses={(expenses as ExpenseWithJoins[]) ?? []}
               properties={properties}
-              departments={(departments ?? []) as Array<{ id: string; name: string; property_id: string }>}
               accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
               userRole={user.role}
               defaultPropertyId={defaultPropertyId}

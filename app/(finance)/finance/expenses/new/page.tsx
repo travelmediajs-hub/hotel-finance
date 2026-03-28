@@ -69,28 +69,18 @@ export default async function NewExpensePage({ searchParams }: Props) {
     propertyId = propertyIds[0]
   }
 
-  // Fetch departments and USALI accounts for the property
-  const [{ data: departments }, { data: accounts }] = await Promise.all([
-    supabase
-      .from('departments')
-      .select('id, name')
-      .eq('property_id', propertyId)
-      .eq('status', 'ACTIVE')
-      .order('name'),
-    supabase
-      .from('usali_accounts')
-      .select('id, code, name, level, account_type, parent_id')
-      .eq('is_active', true)
-      .eq('account_type', 'EXPENSE')
-      .order('sort_order'),
-  ])
+  const { data: accounts } = await supabase
+    .from('usali_accounts')
+    .select('id, code, name, level, account_type, parent_id')
+    .eq('is_active', true)
+    .eq('account_type', 'EXPENSE')
+    .order('sort_order')
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-lg font-semibold mb-6">Нов разход</h1>
       <ExpenseForm
         propertyId={propertyId}
-        departments={(departments ?? []) as { id: string; name: string }[]}
         accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
       />
     </div>

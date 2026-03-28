@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 const expenseBaseSchema = z.object({
   property_id: z.string().uuid(),
-  department_id: z.string().uuid(),
+  department_id: z.string().uuid().nullable().optional(),
   account_id: z.string().uuid(),
   supplier: z.string().min(1),
   supplier_eik: z.string().nullable().optional(),
