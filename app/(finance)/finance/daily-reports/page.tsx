@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getFinanceUser, isCORole, getUserPropertyIds } from '@/lib/finance/auth'
 import { DailyReportTable } from '@/components/finance/DailyReportTable'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus } from 'lucide-react'
+import { NewReportButton } from '@/components/finance/NewReportButton'
 
 interface Props {
   searchParams: Promise<{ property_id?: string }>
@@ -98,16 +98,10 @@ export default async function DailyReportsPage({ searchParams }: Props) {
             )}
           </div>
           {canCreate && (
-            <Link
-              href={`/finance/daily-reports/new?property_id=${selectedPropertyId}`}
-              className="inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/80 h-7 px-2.5 text-[0.8rem] font-medium"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Нов отчет
-            </Link>
+            <NewReportButton propertyId={selectedPropertyId} />
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <DailyReportTable
             reports={(reports as Parameters<typeof DailyReportTable>[0]['reports']) ?? []}
             departments={departments ?? []}
