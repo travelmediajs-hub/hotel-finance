@@ -231,13 +231,30 @@ export interface PropertyConsolidation {
   updated_at: string
 }
 
+export interface Supplier {
+  id: string
+  name: string
+  eik: string | null
+  vat_number: string | null
+  address: string | null
+  contact_person: string | null
+  phone: string | null
+  email: string | null
+  iban: string | null
+  notes: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Expense {
   id: string
   property_id: string
-  department_id: string
+  department_id: string | null
   account_id: string
   supplier: string
   supplier_eik: string | null
+  supplier_id: string | null
   document_type: DocumentType
   document_number: string | null
   issue_date: string

@@ -14,7 +14,7 @@ export default async function ExpensesPage() {
   // --- Expenses ---
   let expenseQuery = supabase
     .from('expenses')
-    .select('*, departments(name), properties(name), usali_accounts(code, name)')
+    .select('*, departments(name), properties(name), usali_accounts(code, name), suppliers(name)')
     .order('issue_date', { ascending: false })
     .limit(200)
 
@@ -49,12 +49,19 @@ export default async function ExpensesPage() {
     }
   }
 
-  const { data: accounts } = await supabase
-    .from('usali_accounts')
-    .select('id, code, name, level, account_type, parent_id')
-    .eq('is_active', true)
-    .eq('account_type', 'EXPENSE')
-    .order('sort_order')
+  const [{ data: accounts }, { data: suppliers }] = await Promise.all([
+    supabase
+      .from('usali_accounts')
+      .select('id, code, name, level, account_type, parent_id')
+      .eq('is_active', true)
+      .eq('account_type', 'EXPENSE')
+      .order('sort_order'),
+    supabase
+      .from('suppliers')
+      .select('id, name, eik')
+      .eq('is_active', true)
+      .order('name'),
+  ])
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -68,6 +75,7 @@ export default async function ExpensesPage() {
               expenses={(expenses as ExpenseWithJoins[]) ?? []}
               properties={properties}
               accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
+              suppliers={(suppliers ?? []) as Array<{ id: string; name: string; eik: string | null }>}
               userRole={user.role}
               defaultPropertyId={defaultPropertyId}
             />

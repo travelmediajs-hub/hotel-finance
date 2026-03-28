@@ -73,9 +73,9 @@ const inputCls =
 const inputErrCls =
   'bg-transparent border border-destructive rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-destructive'
 const selectCls =
-  'bg-transparent border border-border rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-ring'
+  'bg-transparent border border-border rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-ring [&_option]:bg-zinc-900 [&_option]:text-zinc-100'
 const selectErrCls =
-  'bg-transparent border border-destructive rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-destructive'
+  'bg-transparent border border-destructive rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-destructive [&_option]:bg-zinc-900 [&_option]:text-zinc-100'
 
 export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, accounts, canCreate }: Props) {
   const router = useRouter()
@@ -289,7 +289,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
                     <select
                       value={accountId}
                       onChange={e => setAccountId(e.target.value)}
-                      className="w-full bg-transparent text-xs border-0 focus:ring-1 focus:ring-primary px-1 py-0.5"
+                      className="w-full bg-transparent text-xs border-0 focus:ring-1 focus:ring-primary px-1 py-0.5 [&_option]:bg-zinc-900 [&_option]:text-zinc-100"
                     >
                       <option value="">Сметка...</option>
                       {accounts

@@ -7,9 +7,10 @@ import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
 import type { Expense, DocumentType, PaymentMethod, ExpenseStatus } from '@/types/finance'
 
 export type ExpenseWithJoins = Expense & {
-  departments: { name: string }
+  departments: { name: string } | null
   properties: { name: string }
   usali_accounts: { code: string; name: string } | null
+  suppliers: { name: string } | null
 }
 
 const documentTypeLabels: Record<DocumentType, string> = {
@@ -49,7 +50,7 @@ const statusVariants: Record<ExpenseStatus, 'default' | 'secondary' | 'destructi
 }
 
 const selectClass =
-  'bg-transparent border border-border rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-ring'
+  'bg-transparent border border-border rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-ring [&_option]:bg-zinc-900 [&_option]:text-zinc-100'
 const inputClass =
   'bg-transparent border border-border rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-ring'
 const inputErrorClass =
@@ -64,7 +65,7 @@ interface NewRowState {
   property_id: string
 
   account_id: string
-  supplier: string
+  supplier_id: string
   document_type: string
   amount_net: string
   vat_amount: string
@@ -76,7 +77,7 @@ interface NewRowErrors {
   property_id?: boolean
 
   account_id?: boolean
-  supplier?: boolean
+  supplier_id?: boolean
   document_type?: boolean
   amount_net?: boolean
   payment_method?: boolean
@@ -86,6 +87,7 @@ interface Props {
   expenses: ExpenseWithJoins[]
   properties: Array<{ id: string; name: string }>
   accounts: Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>
+  suppliers: Array<{ id: string; name: string; eik: string | null }>
   userRole: string
   defaultPropertyId?: string
 }
@@ -94,6 +96,7 @@ export function ExpenseSpreadsheet({
   expenses: initialExpenses,
   properties,
   accounts,
+  suppliers,
   userRole,
   defaultPropertyId,
 }: Props) {
@@ -108,7 +111,7 @@ export function ExpenseSpreadsheet({
     issue_date: today,
     property_id: defaultPropertyId ?? properties[0]?.id ?? '',
     account_id: '',
-    supplier: '',
+    supplier_id: '',
     document_type: '',
     amount_net: '',
     vat_amount: '',
@@ -132,7 +135,7 @@ export function ExpenseSpreadsheet({
     if (!newRow.issue_date) errs.issue_date = true
     if (isCO && !newRow.property_id) errs.property_id = true
     if (!newRow.account_id) errs.account_id = true
-    if (!newRow.supplier.trim()) errs.supplier = true
+    if (!newRow.supplier_id) errs.supplier_id = true
     if (!newRow.document_type) errs.document_type = true
     if (!newRow.amount_net || parseFloat(newRow.amount_net) <= 0) errs.amount_net = true
     if (!newRow.payment_method) errs.payment_method = true
@@ -151,7 +154,7 @@ export function ExpenseSpreadsheet({
     const body = {
       property_id: newRow.property_id || defaultPropertyId,
       account_id: newRow.account_id,
-      supplier: newRow.supplier.trim(),
+      supplier_id: newRow.supplier_id,
       document_type: newRow.document_type,
       issue_date: newRow.issue_date,
       due_date: newRow.issue_date,
@@ -195,10 +198,12 @@ export function ExpenseSpreadsheet({
 
       // Optimistically add new row to the table
       const property = properties.find((p) => p.id === (newRow.property_id || defaultPropertyId))
+      const supplier = suppliers.find(s => s.id === newRow.supplier_id)
       const optimistic: ExpenseWithJoins = {
         ...saved,
-        departments: { name: '' },
+        departments: null,
         properties: { name: property?.name ?? '' },
+        suppliers: supplier ? { name: supplier.name } : null,
       }
       setExpenses((prev) => [optimistic, ...prev])
 
@@ -207,7 +212,7 @@ export function ExpenseSpreadsheet({
         issue_date: today,
         property_id: defaultPropertyId ?? properties[0]?.id ?? '',
         account_id: '',
-        supplier: '',
+        supplier_id: '',
         document_type: '',
         amount_net: '',
         vat_amount: '',
@@ -280,7 +285,7 @@ export function ExpenseSpreadsheet({
                   {expense.usali_accounts?.name ?? '—'}
                 </td>
                 <td className="px-2 py-1 text-muted-foreground max-w-[140px] truncate">
-                  {expense.supplier}
+                  {expense.suppliers?.name ?? expense.supplier}
                 </td>
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
                   {documentTypeLabels[expense.document_type]}
@@ -334,7 +339,7 @@ export function ExpenseSpreadsheet({
                   <select
                     value={newRow.account_id}
                     onChange={e => setField('account_id', e.target.value)}
-                    className="w-full bg-transparent text-xs border-0 focus:ring-1 focus:ring-primary px-1 py-0.5"
+                    className="w-full bg-transparent text-xs border-0 focus:ring-1 focus:ring-primary px-1 py-0.5 [&_option]:bg-zinc-900 [&_option]:text-zinc-100"
                   >
                     <option value="">Сметка...</option>
                     {accounts
@@ -347,13 +352,16 @@ export function ExpenseSpreadsheet({
                   </select>
                 </td>
                 <td className="px-1 py-1 min-w-[120px]">
-                  <input
-                    type="text"
-                    placeholder="Доставчик"
-                    value={newRow.supplier}
-                    onChange={(e) => setField('supplier', e.target.value)}
-                    className={errors.supplier ? inputErrorClass : inputClass}
-                  />
+                  <select
+                    value={newRow.supplier_id}
+                    onChange={(e) => setField('supplier_id', e.target.value)}
+                    className={errors.supplier_id ? inputErrorClass : selectClass}
+                  >
+                    <option value="">Доставчик...</option>
+                    {suppliers.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </td>
                 <td className="px-1 py-1 min-w-[110px]">
                   <select
