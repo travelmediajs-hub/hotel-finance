@@ -2,6 +2,12 @@
 -- Redesign daily reports: per-property instead of per-department
 -- =============================================================
 
+-- 0. Drop RLS policies that reference columns we're about to remove
+DROP POLICY IF EXISTS daily_reports_insert ON daily_reports;
+DROP POLICY IF EXISTS daily_reports_update ON daily_reports;
+DROP POLICY IF EXISTS daily_reports_select ON daily_reports;
+DROP POLICY IF EXISTS daily_report_lines_all ON daily_report_lines;
+
 -- 1. Drop old child tables (no production data yet)
 DROP TABLE IF EXISTS pos_entries CASCADE;
 DROP TABLE IF EXISTS z_reports CASCADE;
@@ -60,7 +66,15 @@ ALTER TABLE daily_reports DROP CONSTRAINT IF EXISTS daily_reports_status_check;
 ALTER TABLE daily_reports ADD CONSTRAINT daily_reports_status_check
   CHECK (status IN ('DRAFT', 'SUBMITTED', 'APPROVED', 'RETURNED'));
 
--- 4. RLS for daily_report_lines
+-- 4. Recreate RLS policies for daily_reports (without department_id)
+CREATE POLICY daily_reports_select ON daily_reports FOR SELECT
+  USING (public.has_property_access(property_id));
+CREATE POLICY daily_reports_insert ON daily_reports FOR INSERT
+  WITH CHECK (public.has_property_access(property_id));
+CREATE POLICY daily_reports_update ON daily_reports FOR UPDATE
+  USING (public.has_property_access(property_id));
+
+-- 5. RLS for daily_report_lines
 ALTER TABLE daily_report_lines ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "daily_report_lines_select" ON daily_report_lines
