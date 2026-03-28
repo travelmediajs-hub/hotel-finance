@@ -301,7 +301,7 @@ CREATE TABLE expenses (
   paid_at date,
   paid_from_cash text,
   status text NOT NULL DEFAULT 'DRAFT' CHECK (status IN (
-    'DRAFT', 'UNPAID', 'SENT_TO_CO', 'APPROVED', 'PARTIAL', 'PAID', 'OVERDUE', 'REJECTED'
+    'DRAFT', 'UNPAID', 'SENT_TO_CO', 'APPROVED', 'PARTIAL', 'PAID', 'OVERDUE', 'REJECTED', 'RETURNED'
   )),
   paid_amount decimal(12,2) NOT NULL DEFAULT 0,
   remaining_amount decimal(12,2) NOT NULL GENERATED ALWAYS AS (
@@ -309,6 +309,7 @@ CREATE TABLE expenses (
   ) STORED,
   attachment_url text,
   note text,
+  co_comment text,
   created_by_id uuid NOT NULL REFERENCES user_profiles(id),
   approved_by_id uuid REFERENCES user_profiles(id),
   paid_by_id uuid REFERENCES user_profiles(id),
