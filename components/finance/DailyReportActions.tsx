@@ -12,10 +12,9 @@ interface Props {
   reportId: string
   status: DailyReportStatus
   userRole: UserRole
-  isOwner: boolean
 }
 
-export function DailyReportActions({ reportId, status, userRole, isOwner }: Props) {
+export function DailyReportActions({ reportId, status, userRole }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -35,7 +34,7 @@ export function DailyReportActions({ reportId, status, userRole, isOwner }: Prop
       })
       if (!res.ok) {
         const data = await res.json()
-        setError(data.message ?? data.error ?? 'Грешка при изпълнение на действието')
+        setError(data.message ?? data.error ?? 'Грешка')
         return
       }
       setShowReturn(false)
@@ -48,17 +47,11 @@ export function DailyReportActions({ reportId, status, userRole, isOwner }: Prop
     }
   }
 
-  // Determine which actions are available
-  const isAdmin = userRole === 'ADMIN_CO'
-  const canSubmit = (isOwner || isAdmin) && (status === 'DRAFT' || status === 'RETURNED')
-  const canConfirm = (userRole === 'MANAGER' || isAdmin) && status === 'SUBMITTED'
-  const canReturnAsManager = (userRole === 'MANAGER' || isAdmin) && status === 'SUBMITTED'
-  const canApprove = (isAdmin || userRole === 'FINANCE_CO') && status === 'SENT_TO_CO'
-  const canReturnAsCO = (isAdmin || userRole === 'FINANCE_CO') && status === 'SENT_TO_CO'
+  const isCO = userRole === 'ADMIN_CO' || userRole === 'FINANCE_CO'
+  const canApprove = isCO && status === 'SUBMITTED'
+  const canReturn = isCO && status === 'SUBMITTED'
 
-  const hasActions = canSubmit || canConfirm || canReturnAsManager || canApprove || canReturnAsCO
-
-  if (!hasActions) return null
+  if (!canApprove && !canReturn) return null
 
   return (
     <Card>
@@ -70,25 +63,13 @@ export function DailyReportActions({ reportId, status, userRole, isOwner }: Prop
         )}
 
         <div className="flex flex-wrap gap-3">
-          {canSubmit && (
-            <Button disabled={loading} onClick={() => performAction('submit')}>
-              {loading ? 'Изпращане...' : 'Изпрати към управител'}
-            </Button>
-          )}
-
-          {canConfirm && (
-            <Button disabled={loading} onClick={() => performAction('confirm')}>
-              {loading ? 'Потвърждаване...' : 'Потвърди'}
-            </Button>
-          )}
-
           {canApprove && (
             <Button disabled={loading} onClick={() => performAction('approve')}>
               {loading ? 'Одобряване...' : 'Одобри'}
             </Button>
           )}
 
-          {(canReturnAsManager || canReturnAsCO) && (
+          {canReturn && (
             <Button
               variant="destructive"
               disabled={loading}
