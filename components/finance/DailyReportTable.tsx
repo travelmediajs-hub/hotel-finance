@@ -125,6 +125,7 @@ export function DailyReportTable({
   const drawerReport = reports.find((r) => r.id === drawerReportId) ?? null
 
   function canEditReport(status: DailyReportStatus): boolean {
+    if (userRole === 'FINANCE_CO') return false
     return status === 'DRAFT' || status === 'RETURNED'
   }
 
@@ -232,6 +233,7 @@ export function DailyReportTable({
   // ---- Actions ----
 
   async function handleSubmit(reportId: string) {
+    if (!confirm('Изпращане на отчета към ЦО?')) return
     const report = reports.find((r) => r.id === reportId)
     if (!report) return
     setActionLoading(reportId)
@@ -261,6 +263,7 @@ export function DailyReportTable({
   }
 
   async function handleApprove(reportId: string) {
+    if (!confirm('Одобряване на отчета?')) return
     setActionLoading(reportId)
     try {
       const res = await fetch(`/api/finance/daily-reports/${reportId}/approve`, {
