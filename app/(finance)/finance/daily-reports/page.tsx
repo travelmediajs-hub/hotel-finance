@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getFinanceUser, isCORole, getUserPropertyIds } from '@/lib/finance/auth'
 import { DailyReportTable } from '@/components/finance/DailyReportTable'
-import type { ReportWithLines } from '@/components/finance/DailyReportTable'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Plus } from 'lucide-react'
 
@@ -50,7 +49,7 @@ export default async function DailyReportsPage({ searchParams }: Props) {
 
   const { data: departments } = await supabase
     .from('departments')
-    .select('id, name')
+    .select('id, name, fiscal_device_id')
     .eq('property_id', selectedPropertyId)
     .eq('status', 'ACTIVE')
     .order('name')
@@ -61,6 +60,16 @@ export default async function DailyReportsPage({ searchParams }: Props) {
     .eq('property_id', selectedPropertyId)
     .order('date', { ascending: false })
     .limit(60)
+
+  // For DEPT_HEAD, fetch which departments they can edit
+  let userDepartmentIds: string[] | undefined
+  if (user.role === 'DEPT_HEAD' && !user.isSimulating) {
+    const { data: deptAccess } = await supabase
+      .from('user_department_access')
+      .select('department_id')
+      .eq('user_id', user.id)
+    userDepartmentIds = (deptAccess ?? []).map((a) => a.department_id)
+  }
 
   const canCreate = user.role === 'MANAGER' || user.role === 'ADMIN_CO' || user.role === 'DEPT_HEAD'
 
@@ -100,8 +109,11 @@ export default async function DailyReportsPage({ searchParams }: Props) {
         </CardHeader>
         <CardContent>
           <DailyReportTable
-            reports={(reports as ReportWithLines[]) ?? []}
+            reports={(reports as Parameters<typeof DailyReportTable>[0]['reports']) ?? []}
             departments={departments ?? []}
+            userRole={user.role}
+            userDepartmentIds={userDepartmentIds}
+            propertyId={selectedPropertyId}
           />
         </CardContent>
       </Card>
