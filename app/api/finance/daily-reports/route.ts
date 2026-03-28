@@ -1,59 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getFinanceUser } from '@/lib/finance/auth'
-import { saveDailyReportSchema } from '@/lib/finance/schemas'
+import { getFinanceUser, getUserPropertyIds } from '@/lib/finance/auth'
+import { createDailyReportSchema } from '@/lib/finance/schemas'
 
 export async function GET(request: NextRequest) {
   const user = await getFinanceUser()
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   const supabase = await createClient()
   const { searchParams } = request.nextUrl
 
   const propertyId = searchParams.get('property_id')
-  const date = searchParams.get('date')
-  const status = searchParams.get('status')
+  const fromDate = searchParams.get('from_date')
+  const toDate = searchParams.get('to_date')
+
+  if (!propertyId) {
+    return NextResponse.json({ error: 'property_id is required' }, { status: 400 })
+  }
+
+  const allowedIds = await getUserPropertyIds(user)
+  if (allowedIds && !allowedIds.includes(propertyId)) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
 
   let query = supabase
     .from('daily_reports')
-    .select('*, departments(name), properties(name)')
+    .select('*, daily_report_lines(*, departments(id, name))')
+    .eq('property_id', propertyId)
     .order('date', { ascending: false })
-    .limit(100)
+    .limit(60)
 
-  // DEPT_HEAD sees only reports they created
-  if (user.role === 'DEPT_HEAD') {
-    query = query.eq('created_by_id', user.id)
-  }
-
-  if (propertyId) {
-    query = query.eq('property_id', propertyId)
-  }
-  if (date) {
-    query = query.eq('date', date)
-  }
-  if (status) {
-    query = query.eq('status', status)
-  }
+  if (fromDate) query = query.gte('date', fromDate)
+  if (toDate) query = query.lte('date', toDate)
 
   const { data, error } = await query
-
-  if (error) {
-    return NextResponse.json({ error: 'database_error' }, { status: 500 })
-  }
+  if (error) return NextResponse.json({ error: 'database_error' }, { status: 500 })
 
   return NextResponse.json(data)
 }
 
 export async function POST(request: NextRequest) {
   const user = await getFinanceUser()
-  if (!user) {
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  if (user.role !== 'MANAGER' && user.role !== 'ADMIN_CO' && user.role !== 'DEPT_HEAD') {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
   const body = await request.json()
-  const parsed = saveDailyReportSchema.safeParse(body)
+  const parsed = createDailyReportSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
       { error: 'validation_error', details: parsed.error.flatten() },
@@ -61,55 +56,40 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { department_id, property_id, date, lines, pos_entries, z_report, diff_explanation } =
-    parsed.data
-
+  const { property_id, date } = parsed.data
   const supabase = await createClient()
 
-  // Check for duplicate report (same department + date)
+  const allowedIds = await getUserPropertyIds(user)
+  if (allowedIds && !allowedIds.includes(property_id)) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
   const { data: existing } = await supabase
     .from('daily_reports')
     .select('id')
-    .eq('department_id', department_id)
+    .eq('property_id', property_id)
     .eq('date', date)
-    .limit(1)
     .maybeSingle()
 
   if (existing) {
     return NextResponse.json(
-      { error: 'duplicate', message: 'Вече съществува отчет за този отдел и дата' },
+      { error: 'duplicate', message: 'Вече съществува отчет за този обект и дата' },
       { status: 409 }
     )
   }
 
-  // Calculate totals
-  const totalCashNet = lines.reduce(
-    (sum, l) => sum + (l.cash_income - l.cash_return),
-    0
-  )
-  const totalPOSNet = pos_entries.reduce(
-    (sum, e) => sum + (e.amount - e.return_amount),
-    0
-  )
-  const cashDiff = totalCashNet - z_report.cash_amount
-  const posDiff = totalPOSNet - z_report.pos_amount
-  const totalDiff = cashDiff + posDiff
-
-  // Insert report
   const { data: report, error: reportError } = await supabase
     .from('daily_reports')
     .insert({
-      department_id,
       property_id,
       date,
       created_by_id: user.id,
       status: 'DRAFT',
-      total_cash_net: totalCashNet,
-      total_pos_net: totalPOSNet,
-      cash_diff: cashDiff,
-      pos_diff: posDiff,
-      total_diff: totalDiff,
-      diff_explanation: diff_explanation ?? null,
+      total_cash_net: 0,
+      total_pos_net: 0,
+      cash_diff: 0,
+      pos_diff: 0,
+      total_diff: 0,
     })
     .select()
     .single()
@@ -118,44 +98,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'database_error' }, { status: 500 })
   }
 
-  // Insert child records in parallel
-  const reportId = report.id
+  const { data: departments } = await supabase
+    .from('departments')
+    .select('id')
+    .eq('property_id', property_id)
+    .eq('status', 'ACTIVE')
 
-  const [linesResult, posResult, zResult] = await Promise.all([
-    // Insert report lines
-    supabase.from('daily_report_lines').insert(
-      lines.map((l) => ({
-        daily_report_id: reportId,
-        department_id: l.department_id,
-        cash_income: l.cash_income,
-        cash_return: l.cash_return,
-      }))
-    ),
-    // Insert POS entries
-    pos_entries.length > 0
-      ? supabase.from('pos_entries').insert(
-          pos_entries.map((e) => ({
-            daily_report_id: reportId,
-            pos_terminal_id: e.pos_terminal_id,
-            amount: e.amount,
-            return_amount: e.return_amount,
-          }))
-        )
-      : { error: null },
-    // Insert Z-report
-    supabase.from('z_reports').insert({
-      daily_report_id: reportId,
-      cash_amount: z_report.cash_amount,
-      pos_amount: z_report.pos_amount,
-      attachment_url: z_report.attachment_url,
-      additional_files: z_report.additional_files ?? [],
-    }),
-  ])
+  if (departments && departments.length > 0) {
+    const { error: linesError } = await supabase
+      .from('daily_report_lines')
+      .insert(
+        departments.map((d) => ({
+          daily_report_id: report.id,
+          department_id: d.id,
+        }))
+      )
 
-  if (linesResult.error || posResult.error || zResult.error) {
-    // Clean up the parent report if child inserts fail
-    await supabase.from('daily_reports').delete().eq('id', reportId)
-    return NextResponse.json({ error: 'database_error' }, { status: 500 })
+    if (linesError) {
+      await supabase.from('daily_reports').delete().eq('id', report.id)
+      return NextResponse.json({ error: 'database_error' }, { status: 500 })
+    }
   }
 
   return NextResponse.json(report, { status: 201 })
