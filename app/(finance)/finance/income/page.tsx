@@ -1,11 +1,9 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getFinanceUser, getUserPropertyIds } from '@/lib/finance/auth'
-import { IncomeList } from '@/components/finance/IncomeList'
-import type { IncomeEntryWithJoins } from '@/components/finance/IncomeList'
+import { IncomeSpreadsheet } from '@/components/finance/IncomeSpreadsheet'
+import type { IncomeEntryWithJoins } from '@/components/finance/IncomeSpreadsheet'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus } from 'lucide-react'
 
 export default async function IncomePage() {
   const user = await getFinanceUser()
@@ -42,7 +40,29 @@ export default async function IncomePage() {
     }
   }
 
-  const { data: entries } = await query
+  const [
+    { data: entries },
+    { data: properties },
+    { data: bankAccounts },
+    { data: loans },
+  ] = await Promise.all([
+    query,
+    supabase
+      .from('properties')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name'),
+    supabase
+      .from('bank_accounts')
+      .select('id, name, iban')
+      .eq('is_active', true)
+      .order('name'),
+    supabase
+      .from('loans')
+      .select('id, bank, contract_number')
+      .eq('is_active', true)
+      .order('bank'),
+  ])
 
   const isCO = user.role === 'ADMIN_CO' || user.role === 'FINANCE_CO'
 
@@ -51,18 +71,15 @@ export default async function IncomePage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-lg">Приходи</CardTitle>
-          {isCO && (
-            <Link
-              href="/finance/income/new"
-              className="inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/80 h-7 px-2.5 text-[0.8rem] font-medium"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" />
-              Нов запис
-            </Link>
-          )}
         </CardHeader>
         <CardContent>
-          <IncomeList entries={(entries as IncomeEntryWithJoins[]) ?? []} />
+          <IncomeSpreadsheet
+            entries={(entries as IncomeEntryWithJoins[]) ?? []}
+            properties={properties ?? []}
+            bankAccounts={bankAccounts ?? []}
+            loans={loans ?? []}
+            canCreate={isCO}
+          />
         </CardContent>
       </Card>
     </div>
