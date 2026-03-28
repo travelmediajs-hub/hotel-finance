@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 
 interface DepartmentInfo {
   id: string
@@ -91,7 +90,6 @@ export function DailyReportForm({
   const [diffExplanation, setDiffExplanation] = useState(initialDiffExplanation ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [savingLine, setSavingLine] = useState<string | null>(null)
 
   const totalCashNet = lines.reduce((s, l) => s + l.cash_income - l.cash_refund, 0)
   const totalPosNet = lines.reduce((s, l) => s + l.pos_income - l.pos_refund, 0)
@@ -115,41 +113,6 @@ export function DailyReportForm({
     setLines((prev) =>
       prev.map((l) => (l.department_id === deptId ? { ...l, [field]: value } : l))
     )
-  }
-
-  async function saveLine(deptId: string) {
-    const line = lines.find((l) => l.department_id === deptId)
-    if (!line) return
-
-    setSavingLine(deptId)
-    setError(null)
-
-    try {
-      const res = await fetch(`/api/finance/daily-reports/${reportId}/lines`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          department_id: deptId,
-          cash_income: line.cash_income,
-          cash_refund: line.cash_refund,
-          pos_income: line.pos_income,
-          pos_refund: line.pos_refund,
-          z_cash: line.z_cash,
-          z_pos: line.z_pos,
-          z_attachment_url: line.z_attachment_url || null,
-          pos_report_amount: line.pos_report_amount,
-        }),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        setError(data.message ?? 'Грешка при запис')
-      }
-    } catch {
-      setError('Грешка при връзка със сървъра')
-    } finally {
-      setSavingLine(null)
-    }
   }
 
   async function saveAllLines() {
@@ -221,22 +184,27 @@ export function DailyReportForm({
 
   const diffColor = (v: number) => (v !== 0 ? 'text-red-500' : 'text-green-500')
 
-  function numInput(
-    deptId: string,
-    field: keyof LineData,
-    value: number,
-    disabled: boolean
-  ) {
+  function numCell(deptId: string, field: keyof LineData, value: number, disabled: boolean) {
     return (
-      <Input
-        type="number"
-        min={0}
-        step="0.01"
-        value={value || ''}
-        disabled={disabled}
-        onChange={(e) => updateLine(deptId, field, parseFloat(e.target.value) || 0)}
-        className="h-8 text-sm"
-      />
+      <td className="px-1 py-1">
+        <Input
+          type="number"
+          min={0}
+          step="0.01"
+          value={value || ''}
+          disabled={disabled}
+          onChange={(e) => updateLine(deptId, field, parseFloat(e.target.value) || 0)}
+          className="h-7 text-sm w-24 tabular-nums"
+        />
+      </td>
+    )
+  }
+
+  function roCell(value: number, colorize = false) {
+    return (
+      <td className={`px-2 py-1 text-right text-sm tabular-nums font-mono ${colorize ? diffColor(value) : ''}`}>
+        {fmt(value)}
+      </td>
     )
   }
 
@@ -248,180 +216,131 @@ export function DailyReportForm({
         </p>
       )}
 
-      {lines.map((line) => {
-        const editable = canEditLine(line.department_id)
-        const cashNet = line.cash_income - line.cash_refund
-        const posNet = line.pos_income - line.pos_refund
-        const cashDiff = cashNet - line.z_cash
-        const posDiff = posNet - line.pos_report_amount
-        const lineDiff = cashDiff + posDiff
-        const isSaving = savingLine === line.department_id
+      {/* Main spreadsheet table */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Приходи — {propertyName}</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-zinc-900/50">
+                <th className="text-left px-3 py-2 font-medium sticky left-0 bg-zinc-900/50 z-10">Отдел</th>
+                <th className="text-center px-1 py-2 font-medium" colSpan={3}>Каса</th>
+                <th className="text-center px-1 py-2 font-medium border-l border-zinc-800" colSpan={3}>ПОС</th>
+                <th className="text-center px-1 py-2 font-medium border-l border-zinc-800" colSpan={2}>Z-отчет</th>
+                <th className="text-center px-1 py-2 font-medium border-l border-zinc-800">ПОС отч.</th>
+                <th className="text-center px-1 py-2 font-medium border-l border-zinc-800" colSpan={3}>Разлики</th>
+              </tr>
+              <tr className="border-b text-xs text-muted-foreground">
+                <th className="text-left px-3 py-1 sticky left-0 bg-zinc-950 z-10" />
+                <th className="text-right px-1 py-1">Приход</th>
+                <th className="text-right px-1 py-1">Сторно</th>
+                <th className="text-right px-1 py-1">Нето</th>
+                <th className="text-right px-1 py-1 border-l border-zinc-800">Приход</th>
+                <th className="text-right px-1 py-1">Сторно</th>
+                <th className="text-right px-1 py-1">Нето</th>
+                <th className="text-right px-1 py-1 border-l border-zinc-800">Каса</th>
+                <th className="text-right px-1 py-1">ПОС</th>
+                <th className="text-right px-1 py-1 border-l border-zinc-800">Банка</th>
+                <th className="text-right px-1 py-1 border-l border-zinc-800">Каса</th>
+                <th className="text-right px-1 py-1">ПОС</th>
+                <th className="text-right px-1 py-1">Общо</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((line) => {
+                const editable = canEditLine(line.department_id)
+                const cashNet = line.cash_income - line.cash_refund
+                const posNet = line.pos_income - line.pos_refund
+                const cashDiff = cashNet - line.z_cash
+                const posDiff = posNet - line.pos_report_amount
+                const lineDiff = cashDiff + posDiff
 
-        return (
-          <Card key={line.department_id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{line.department_name}</CardTitle>
-                {editable && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={isSaving}
-                    onClick={() => saveLine(line.department_id)}
-                  >
-                    {isSaving ? 'Запис...' : 'Запази'}
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-[140px_1fr_1fr_100px] gap-2 text-sm">
-                <div className="flex items-center font-medium">Каса</div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Приход</Label>
-                  {numInput(line.department_id, 'cash_income', line.cash_income, !editable)}
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Сторно</Label>
-                  {numInput(line.department_id, 'cash_refund', line.cash_refund, !editable)}
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Нето</Label>
-                  <div className="h-8 flex items-center justify-end font-mono text-sm">
-                    {fmt(cashNet)}
-                  </div>
-                </div>
+                return (
+                  <tr key={line.department_id} className="border-b border-zinc-800/50 hover:bg-zinc-900/30">
+                    <td className="px-3 py-1 font-medium whitespace-nowrap sticky left-0 bg-zinc-950 z-10">
+                      {line.department_name}
+                    </td>
+                    {numCell(line.department_id, 'cash_income', line.cash_income, !editable)}
+                    {numCell(line.department_id, 'cash_refund', line.cash_refund, !editable)}
+                    {roCell(cashNet)}
+                    {numCell(line.department_id, 'pos_income', line.pos_income, !editable)}
+                    {numCell(line.department_id, 'pos_refund', line.pos_refund, !editable)}
+                    {roCell(posNet)}
+                    {numCell(line.department_id, 'z_cash', line.z_cash, !editable)}
+                    {numCell(line.department_id, 'z_pos', line.z_pos, !editable)}
+                    {numCell(line.department_id, 'pos_report_amount', line.pos_report_amount, !editable)}
+                    {roCell(cashDiff, true)}
+                    {roCell(posDiff, true)}
+                    {roCell(lineDiff, true)}
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-zinc-700 font-medium">
+                <td className="px-3 py-2 sticky left-0 bg-zinc-950 z-10">Общо</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s, l) => s + l.cash_income, 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s, l) => s + l.cash_refund, 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(totalCashNet)}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s, l) => s + l.pos_income, 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s, l) => s + l.pos_refund, 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(totalPosNet)}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s, l) => s + l.z_cash, 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s, l) => s + l.z_pos, 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s, l) => s + l.pos_report_amount, 0))}</td>
+                <td className={`px-2 py-2 text-right tabular-nums font-mono ${diffColor(totalCashDiff)}`}>{fmt(totalCashDiff)}</td>
+                <td className={`px-2 py-2 text-right tabular-nums font-mono ${diffColor(totalPosDiff)}`}>{fmt(totalPosDiff)}</td>
+                <td className={`px-2 py-2 text-right tabular-nums font-mono font-bold ${diffColor(totalDiff)}`}>{fmt(totalDiff)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </CardContent>
+      </Card>
 
-                <div className="flex items-center font-medium">ПОС</div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Приход</Label>
-                  {numInput(line.department_id, 'pos_income', line.pos_income, !editable)}
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Сторно</Label>
-                  {numInput(line.department_id, 'pos_refund', line.pos_refund, !editable)}
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Нето</Label>
-                  <div className="h-8 flex items-center justify-end font-mono text-sm">
-                    {fmt(posNet)}
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="my-3" />
-
-              <div className="grid grid-cols-[140px_1fr_1fr_100px] gap-2 text-sm">
-                <div className="flex items-center font-medium">Z-отчет</div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Каса от Z</Label>
-                  {numInput(line.department_id, 'z_cash', line.z_cash, !editable)}
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">ПОС от Z</Label>
-                  {numInput(line.department_id, 'z_pos', line.z_pos, !editable)}
-                </div>
-                <div />
-
-                <div className="flex items-center font-medium">ПОС отчет</div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Сума от банка</Label>
-                  {numInput(line.department_id, 'pos_report_amount', line.pos_report_amount, !editable)}
-                </div>
-                <div />
-                <div />
-              </div>
-
-              {line.has_fiscal && (
-                <div className="mt-3 space-y-1">
-                  <Label className="text-xs text-muted-foreground">Z-отчет файл</Label>
+      {/* Z-report attachments */}
+      {lines.some((l) => l.has_fiscal) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Z-отчет файлове</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {lines.filter((l) => l.has_fiscal).map((line) => (
+                <div key={line.department_id} className="flex items-center gap-3">
+                  <Label className="w-32 text-sm">{line.department_name}</Label>
                   <Input
                     type="url"
                     placeholder="https://..."
                     value={line.z_attachment_url}
-                    disabled={!editable}
+                    disabled={!canEditLine(line.department_id)}
                     onChange={(e) => updateLine(line.department_id, 'z_attachment_url', e.target.value)}
-                    className="h-8 text-sm"
+                    className="h-8 text-sm flex-1"
                   />
                 </div>
-              )}
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-              <div className="mt-3 flex gap-6 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Каса разл: </span>
-                  <span className={diffColor(cashDiff)}>{fmt(cashDiff)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">ПОС разл: </span>
-                  <span className={diffColor(posDiff)}>{fmt(posDiff)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Общо: </span>
-                  <span className={`font-medium ${diffColor(lineDiff)}`}>{fmt(lineDiff)}</span>
-                </div>
+      {/* Diff explanation + general attachment */}
+      {canEdit && (
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            {totalDiff !== 0 && (
+              <div className="space-y-2">
+                <Label>Обяснение за разликата *</Label>
+                <Textarea
+                  value={diffExplanation}
+                  onChange={(e) => setDiffExplanation(e.target.value)}
+                  placeholder="Опишете причината за разликата..."
+                  rows={3}
+                />
               </div>
-            </CardContent>
-          </Card>
-        )
-      })}
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Обобщение — {propertyName}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Общо каса нето</div>
-              <div className="text-lg font-medium font-mono">{fmt(totalCashNet)}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Общо ПОС нето</div>
-              <div className="text-lg font-medium font-mono">{fmt(totalPosNet)}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Общо</div>
-              <div className="text-lg font-medium font-mono">{fmt(totalCashNet + totalPosNet)}</div>
-            </div>
-          </div>
-
-          <Separator className="my-3" />
-
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Разлика каса</div>
-              <div className={`text-lg font-medium font-mono ${diffColor(totalCashDiff)}`}>
-                {fmt(totalCashDiff)}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Разлика ПОС</div>
-              <div className={`text-lg font-medium font-mono ${diffColor(totalPosDiff)}`}>
-                {fmt(totalPosDiff)}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Обща разлика</div>
-              <div className={`text-lg font-medium font-mono ${diffColor(totalDiff)}`}>
-                {fmt(totalDiff)}
-              </div>
-            </div>
-          </div>
-
-          {totalDiff !== 0 && canEdit && (
-            <div className="mt-4 space-y-2">
-              <Label>Обяснение за разликата *</Label>
-              <Textarea
-                value={diffExplanation}
-                onChange={(e) => setDiffExplanation(e.target.value)}
-                placeholder="Опишете причината за разликата..."
-                rows={3}
-              />
-            </div>
-          )}
-
-          {canEdit && (
-            <div className="mt-4 space-y-2">
+            )}
+            <div className="space-y-2">
               <Label>Общ прикачен файл (незадължителен)</Label>
               <Input
                 type="url"
@@ -430,10 +349,11 @@ export function DailyReportForm({
                 onChange={(e) => setGeneralAttachment(e.target.value)}
               />
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
+      {/* Action buttons */}
       {canEdit && (
         <div className="flex gap-3">
           {canSubmit && (

@@ -2,7 +2,6 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import type { DailyReportStatus } from '@/types/finance'
 
 const statusLabels: Record<DailyReportStatus, string> = {
@@ -42,6 +41,7 @@ export function DailyReportView({ report }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <Card>
         <CardHeader className="flex flex-row items-start justify-between space-y-0">
           <CardTitle className="text-lg">
@@ -79,129 +79,106 @@ export function DailyReportView({ report }: Props) {
         </CardContent>
       </Card>
 
-      {lines.map((line: any) => {
-        const deptName = line.departments?.name ?? line.department_id
-        const cashNet = Number(line.cash_net)
-        const posNet = Number(line.pos_net)
-        const cashDiff = Number(line.cash_diff)
-        const posDiff = Number(line.pos_diff)
-        const lineDiff = Number(line.total_diff)
-
-        return (
-          <Card key={line.id}>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">{deptName}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-4 gap-4 text-sm">
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Каса приход</div>
-                  <div className="font-mono">{fmt(line.cash_income)}</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Каса сторно</div>
-                  <div className="font-mono">{fmt(line.cash_refund)}</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Каса нето</div>
-                  <div className="font-mono font-medium">{fmt(cashNet)}</div>
-                </div>
-                <div />
-
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">ПОС приход</div>
-                  <div className="font-mono">{fmt(line.pos_income)}</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">ПОС сторно</div>
-                  <div className="font-mono">{fmt(line.pos_refund)}</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">ПОС нето</div>
-                  <div className="font-mono font-medium">{fmt(posNet)}</div>
-                </div>
-                <div />
-              </div>
-
-              <Separator className="my-3" />
-
-              <div className="grid grid-cols-4 gap-4 text-sm">
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Z-отчет каса</div>
-                  <div className="font-mono">{fmt(line.z_cash)}</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">Z-отчет ПОС</div>
-                  <div className="font-mono">{fmt(line.z_pos)}</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="text-muted-foreground">ПОС отчет (банка)</div>
-                  <div className="font-mono">{fmt(line.pos_report_amount)}</div>
-                </div>
-                {line.z_attachment_url && (
-                  <div className="space-y-1">
-                    <a
-                      href={line.z_attachment_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline text-sm"
-                    >
-                      Z-отчет файл
-                    </a>
-                  </div>
-                )}
-              </div>
-
-              <Separator className="my-3" />
-
-              <div className="flex gap-6 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Каса разл: </span>
-                  <span className={`font-mono ${diffColor(cashDiff)}`}>{fmt(cashDiff)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">ПОС разл: </span>
-                  <span className={`font-mono ${diffColor(posDiff)}`}>{fmt(posDiff)}</span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Общо: </span>
-                  <span className={`font-mono font-medium ${diffColor(lineDiff)}`}>{fmt(lineDiff)}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )
-      })}
-
+      {/* Data table */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Обобщение</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Общо каса нето</div>
-              <div className="text-lg font-medium font-mono">{fmt(report.total_cash_net)}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Общо ПОС нето</div>
-              <div className="text-lg font-medium font-mono">{fmt(report.total_pos_net)}</div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Обща разлика</div>
-              <div className={`text-lg font-medium font-mono ${diffColor(report.total_diff)}`}>
-                {fmt(report.total_diff)}
-              </div>
-            </div>
-          </div>
-          {report.diff_explanation && (
-            <div className="mt-4 text-sm">
-              <span className="text-muted-foreground">Обяснение: </span>
-              {report.diff_explanation}
-            </div>
-          )}
+        <CardContent className="p-0 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-zinc-900/50">
+                <th className="text-left px-3 py-2 font-medium">Отдел</th>
+                <th className="text-center px-1 py-2 font-medium" colSpan={3}>Каса</th>
+                <th className="text-center px-1 py-2 font-medium border-l border-zinc-800" colSpan={3}>ПОС</th>
+                <th className="text-center px-1 py-2 font-medium border-l border-zinc-800" colSpan={2}>Z-отчет</th>
+                <th className="text-center px-1 py-2 font-medium border-l border-zinc-800">ПОС отч.</th>
+                <th className="text-center px-1 py-2 font-medium border-l border-zinc-800" colSpan={3}>Разлики</th>
+                <th className="px-1 py-2 font-medium border-l border-zinc-800">Файл</th>
+              </tr>
+              <tr className="border-b text-xs text-muted-foreground">
+                <th className="text-left px-3 py-1" />
+                <th className="text-right px-2 py-1">Приход</th>
+                <th className="text-right px-2 py-1">Сторно</th>
+                <th className="text-right px-2 py-1">Нето</th>
+                <th className="text-right px-2 py-1 border-l border-zinc-800">Приход</th>
+                <th className="text-right px-2 py-1">Сторно</th>
+                <th className="text-right px-2 py-1">Нето</th>
+                <th className="text-right px-2 py-1 border-l border-zinc-800">Каса</th>
+                <th className="text-right px-2 py-1">ПОС</th>
+                <th className="text-right px-2 py-1 border-l border-zinc-800">Банка</th>
+                <th className="text-right px-2 py-1 border-l border-zinc-800">Каса</th>
+                <th className="text-right px-2 py-1">ПОС</th>
+                <th className="text-right px-2 py-1">Общо</th>
+                <th className="px-2 py-1 border-l border-zinc-800" />
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((line: any) => {
+                const deptName = line.departments?.name ?? '—'
+                const cashDiff = Number(line.cash_diff)
+                const posDiff = Number(line.pos_diff)
+                const lineDiff = Number(line.total_diff)
+
+                return (
+                  <tr key={line.id} className="border-b border-zinc-800/50">
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">{deptName}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(line.cash_income)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(line.cash_refund)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-mono font-medium">{fmt(Number(line.cash_net))}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-mono border-l border-zinc-800">{fmt(line.pos_income)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(line.pos_refund)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-mono font-medium">{fmt(Number(line.pos_net))}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-mono border-l border-zinc-800">{fmt(line.z_cash)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(line.z_pos)}</td>
+                    <td className="px-2 py-2 text-right tabular-nums font-mono border-l border-zinc-800">{fmt(line.pos_report_amount)}</td>
+                    <td className={`px-2 py-2 text-right tabular-nums font-mono border-l border-zinc-800 ${diffColor(cashDiff)}`}>{fmt(cashDiff)}</td>
+                    <td className={`px-2 py-2 text-right tabular-nums font-mono ${diffColor(posDiff)}`}>{fmt(posDiff)}</td>
+                    <td className={`px-2 py-2 text-right tabular-nums font-mono font-medium ${diffColor(lineDiff)}`}>{fmt(lineDiff)}</td>
+                    <td className="px-2 py-2 border-l border-zinc-800">
+                      {line.z_attachment_url && (
+                        <a
+                          href={line.z_attachment_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline text-xs"
+                        >
+                          Z-файл
+                        </a>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t-2 border-zinc-700 font-medium">
+                <td className="px-3 py-2">Общо</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s: number, l: any) => s + Number(l.cash_income), 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s: number, l: any) => s + Number(l.cash_refund), 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(report.total_cash_net)}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s: number, l: any) => s + Number(l.pos_income), 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s: number, l: any) => s + Number(l.pos_refund), 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(report.total_pos_net)}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s: number, l: any) => s + Number(l.z_cash), 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s: number, l: any) => s + Number(l.z_pos), 0))}</td>
+                <td className="px-2 py-2 text-right tabular-nums font-mono">{fmt(lines.reduce((s: number, l: any) => s + Number(l.pos_report_amount), 0))}</td>
+                <td className={`px-2 py-2 text-right tabular-nums font-mono ${diffColor(report.cash_diff)}`}>{fmt(report.cash_diff)}</td>
+                <td className={`px-2 py-2 text-right tabular-nums font-mono ${diffColor(report.pos_diff)}`}>{fmt(report.pos_diff)}</td>
+                <td className={`px-2 py-2 text-right tabular-nums font-mono font-bold ${diffColor(report.total_diff)}`}>{fmt(report.total_diff)}</td>
+                <td />
+              </tr>
+            </tfoot>
+          </table>
         </CardContent>
       </Card>
+
+      {/* Diff explanation */}
+      {report.diff_explanation && (
+        <Card>
+          <CardContent className="pt-6 text-sm">
+            <span className="text-muted-foreground">Обяснение за разликата: </span>
+            {report.diff_explanation}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
