@@ -13,6 +13,7 @@ export default async function NewIncomePage() {
     { data: properties },
     { data: bankAccounts },
     { data: loans },
+    { data: accounts },
   ] = await Promise.all([
     supabase
       .from('properties')
@@ -29,6 +30,12 @@ export default async function NewIncomePage() {
       .select('id, name')
       .eq('status', 'ACTIVE')
       .order('name'),
+    supabase
+      .from('usali_accounts')
+      .select('id, code, name, level, account_type, parent_id')
+      .eq('is_active', true)
+      .eq('account_type', 'REVENUE')
+      .order('sort_order'),
   ])
 
   return (
@@ -38,6 +45,7 @@ export default async function NewIncomePage() {
         properties={(properties ?? []) as { id: string; name: string }[]}
         bankAccounts={(bankAccounts ?? []) as { id: string; name: string; iban: string }[]}
         loans={(loans ?? []) as { id: string; name: string }[]}
+        accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
       />
     </div>
   )

@@ -17,7 +17,7 @@ export default async function ExpenseDetailPage({
 
   const { data: expense } = await supabase
     .from('expenses')
-    .select('*, departments(name), properties(name)')
+    .select('*, departments(name), properties(name), usali_accounts(code, name)')
     .eq('id', id)
     .single()
 

@@ -18,7 +18,7 @@ export default async function NewExpensePage({ searchParams }: Props) {
 
   let propertyId = ''
 
-  if (user.role === 'ADMIN_CO') {
+  if (user.role === 'ADMIN_CO' || user.isSimulating) {
     if (!params.property_id) {
       // Show property picker
       const { data: properties } = await supabase
@@ -69,13 +69,21 @@ export default async function NewExpensePage({ searchParams }: Props) {
     propertyId = propertyIds[0]
   }
 
-  // Fetch departments for the property
-  const { data: departments } = await supabase
-    .from('departments')
-    .select('id, name')
-    .eq('property_id', propertyId)
-    .eq('status', 'ACTIVE')
-    .order('name')
+  // Fetch departments and USALI accounts for the property
+  const [{ data: departments }, { data: accounts }] = await Promise.all([
+    supabase
+      .from('departments')
+      .select('id, name')
+      .eq('property_id', propertyId)
+      .eq('status', 'ACTIVE')
+      .order('name'),
+    supabase
+      .from('usali_accounts')
+      .select('id, code, name, level, account_type, parent_id')
+      .eq('is_active', true)
+      .eq('account_type', 'EXPENSE')
+      .order('sort_order'),
+  ])
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
@@ -83,6 +91,7 @@ export default async function NewExpensePage({ searchParams }: Props) {
       <ExpenseForm
         propertyId={propertyId}
         departments={(departments ?? []) as { id: string; name: string }[]}
+        accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
       />
     </div>
   )
