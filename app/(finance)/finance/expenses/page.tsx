@@ -14,7 +14,7 @@ export default async function ExpensesPage() {
   // --- Expenses ---
   let expenseQuery = supabase
     .from('expenses')
-    .select('*, departments(name), properties(name)')
+    .select('*, departments(name), properties(name), usali_accounts(code, name)')
     .order('issue_date', { ascending: false })
     .limit(200)
 
@@ -64,6 +64,13 @@ export default async function ExpensesPage() {
 
   const { data: departments } = await deptQuery
 
+  const { data: accounts } = await supabase
+    .from('usali_accounts')
+    .select('id, code, name, level, account_type, parent_id')
+    .eq('is_active', true)
+    .eq('account_type', 'EXPENSE')
+    .order('sort_order')
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <Card>
@@ -76,6 +83,7 @@ export default async function ExpensesPage() {
               expenses={(expenses as ExpenseWithJoins[]) ?? []}
               properties={properties}
               departments={(departments ?? []) as Array<{ id: string; name: string; property_id: string }>}
+              accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
               userRole={user.role}
               defaultPropertyId={defaultPropertyId}
             />

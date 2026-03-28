@@ -13,7 +13,7 @@ export default async function IncomePage() {
 
   let query = supabase
     .from('income_entries')
-    .select('*, properties(name)')
+    .select('*, properties(name), usali_accounts(code, name)')
     .order('entry_date', { ascending: false })
     .limit(200)
 
@@ -45,6 +45,7 @@ export default async function IncomePage() {
     { data: properties },
     { data: bankAccounts },
     { data: loans },
+    { data: accounts },
   ] = await Promise.all([
     query,
     supabase
@@ -62,6 +63,12 @@ export default async function IncomePage() {
       .select('id, bank, contract_number')
       .eq('is_active', true)
       .order('bank'),
+    supabase
+      .from('usali_accounts')
+      .select('id, code, name, level, account_type, parent_id')
+      .eq('is_active', true)
+      .eq('account_type', 'REVENUE')
+      .order('sort_order'),
   ])
 
   const isCO = user.role === 'ADMIN_CO' || user.role === 'FINANCE_CO'
@@ -78,6 +85,7 @@ export default async function IncomePage() {
             properties={properties ?? []}
             bankAccounts={bankAccounts ?? []}
             loans={loans ?? []}
+            accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
             canCreate={isCO}
           />
         </CardContent>

@@ -6,13 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import type {
   IncomeEntry,
   IncomeEntryType,
-  IncomeCategory,
   IncomePaymentMethod,
   IncomeEntryStatus,
 } from '@/types/finance'
 
 export type IncomeEntryWithJoins = IncomeEntry & {
   properties: { name: string }
+  usali_accounts: { code: string; name: string } | null
 }
 
 interface Props {
@@ -20,6 +20,7 @@ interface Props {
   properties: Array<{ id: string; name: string }>
   bankAccounts: Array<{ id: string; name: string; iban: string }>
   loans: Array<{ id: string; bank: string; contract_number: string }>
+  accounts: Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>
   canCreate: boolean
 }
 
@@ -31,15 +32,6 @@ const typeLabels: Record<IncomeEntryType, string> = {
   INC_OTHER: 'Друг',
   CF_CREDIT: 'Кредит',
   CF_TRANSFER: 'Трансфер',
-}
-
-const categoryLabels: Record<IncomeCategory, string> = {
-  ACCOMMODATION: 'Нощувки',
-  FB: 'F&B',
-  SPA: 'СПА',
-  FEES: 'Такси',
-  COMMISSIONS: 'Комисиони',
-  OTHER: 'Друго',
 }
 
 const statusLabels: Record<IncomeEntryStatus, string> = {
@@ -71,15 +63,6 @@ const typeOptions: { value: IncomeEntryType; label: string }[] = [
   { value: 'CF_TRANSFER', label: 'Трансфер' },
 ]
 
-const categoryOptions: { value: IncomeCategory; label: string }[] = [
-  { value: 'ACCOMMODATION', label: 'Нощувки' },
-  { value: 'FB', label: 'F&B' },
-  { value: 'SPA', label: 'СПА' },
-  { value: 'FEES', label: 'Такси' },
-  { value: 'COMMISSIONS', label: 'Комисиони' },
-  { value: 'OTHER', label: 'Друго' },
-]
-
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
@@ -93,14 +76,14 @@ const selectCls =
 const selectErrCls =
   'bg-transparent border border-destructive rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-destructive'
 
-export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, canCreate }: Props) {
+export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, accounts, canCreate }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
 
   const [entryDate, setEntryDate] = useState(today)
   const [propertyId, setPropertyId] = useState('')
   const [type, setType] = useState<IncomeEntryType | ''>('')
-  const [incomeCategory, setIncomeCategory] = useState<IncomeCategory | ''>('')
+  const [accountId, setAccountId] = useState('')
   const [amount, setAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<IncomePaymentMethod | ''>('')
   const [payer, setPayer] = useState('')
@@ -120,7 +103,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ca
     if (!amount || parseFloat(amount) <= 0) errs.amount = true
     if (!paymentMethod) errs.paymentMethod = true
     if (!payer.trim()) errs.payer = true
-    if (showCategory && !incomeCategory) errs.incomeCategory = true
+    if (showCategory && !accountId) errs.accountId = true
     setFieldErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -141,7 +124,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ca
         amount: parseFloat(amount),
         payment_method: paymentMethod,
         payer: payer.trim(),
-        income_category: showCategory && incomeCategory ? incomeCategory : null,
+        account_id: showCategory && accountId ? accountId : null,
       }
 
       const res = await fetch('/api/finance/income', {
@@ -165,7 +148,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ca
       setEntryDate(today)
       setPropertyId('')
       setType('')
-      setIncomeCategory('')
+      setAccountId('')
       setAmount('')
       setPaymentMethod('')
       setPayer('')
@@ -193,7 +176,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ca
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Дата</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Обект</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Тип</th>
-              <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Категория</th>
+              <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Сметка</th>
               <th className="text-right px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Сума</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Плащане</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Платец</th>
@@ -224,7 +207,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ca
                   {typeLabels[entry.type]}
                 </td>
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
-                  {entry.income_category ? categoryLabels[entry.income_category] : '—'}
+                  {entry.usali_accounts ? `${entry.usali_accounts.code} ${entry.usali_accounts.name}` : '—'}
                 </td>
                 <td className="px-2 py-1 text-right font-mono whitespace-nowrap">
                   {entry.amount.toFixed(2)} лв.
@@ -289,7 +272,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ca
                     onChange={(e) => {
                       const v = e.target.value as IncomeEntryType | ''
                       setType(v)
-                      if (v && !v.startsWith('INC_')) setIncomeCategory('')
+                      if (v && !v.startsWith('INC_')) setAccountId('')
                     }}
                     className={fieldErrors.type ? selectErrCls : selectCls}
                   >
@@ -302,14 +285,18 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ca
                 <td className="px-2 py-1 min-w-[100px]">
                   {showCategory ? (
                     <select
-                      value={incomeCategory}
-                      onChange={(e) => setIncomeCategory(e.target.value as IncomeCategory | '')}
-                      className={fieldErrors.incomeCategory ? selectErrCls : selectCls}
+                      value={accountId}
+                      onChange={e => setAccountId(e.target.value)}
+                      className="w-full bg-transparent text-xs border-0 focus:ring-1 focus:ring-primary px-1 py-0.5"
                     >
-                      <option value="">— категория —</option>
-                      {categoryOptions.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
+                      <option value="">Сметка...</option>
+                      {accounts
+                        .filter(a => a.account_type === 'REVENUE' && a.level === 3)
+                        .map(a => (
+                          <option key={a.id} value={a.id}>
+                            {a.code} {a.name}
+                          </option>
+                        ))}
                     </select>
                   ) : (
                     <span className="text-muted-foreground px-1">—</span>

@@ -3,25 +3,12 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
-import type { Expense, ExpenseCategory, DocumentType, PaymentMethod, ExpenseStatus } from '@/types/finance'
+import type { Expense, DocumentType, PaymentMethod, ExpenseStatus } from '@/types/finance'
 
 export type ExpenseWithJoins = Expense & {
   departments: { name: string }
   properties: { name: string }
-}
-
-const categoryLabels: Record<ExpenseCategory, string> = {
-  CONSUMABLES: 'Консумативи',
-  SALARIES: 'Заплати',
-  FOOD_KITCHEN: 'Кухня',
-  FUEL: 'Гориво',
-  TAXES_FEES: 'Данъци/Такси',
-  MAINTENANCE: 'Поддръжка',
-  UTILITIES: 'Комунални',
-  MARKETING: 'Маркетинг',
-  INSURANCE: 'Застраховки',
-  ACCOUNTING: 'Счетоводство',
-  OTHER: 'Друго',
+  usali_accounts: { code: string; name: string } | null
 }
 
 const documentTypeLabels: Record<DocumentType, string> = {
@@ -75,7 +62,7 @@ interface NewRowState {
   issue_date: string
   property_id: string
   department_id: string
-  category: string
+  account_id: string
   supplier: string
   document_type: string
   amount_net: string
@@ -87,7 +74,7 @@ interface NewRowErrors {
   issue_date?: boolean
   property_id?: boolean
   department_id?: boolean
-  category?: boolean
+  account_id?: boolean
   supplier?: boolean
   document_type?: boolean
   amount_net?: boolean
@@ -98,6 +85,7 @@ interface Props {
   expenses: ExpenseWithJoins[]
   properties: Array<{ id: string; name: string }>
   departments: Array<{ id: string; name: string; property_id: string }>
+  accounts: Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>
   userRole: string
   defaultPropertyId?: string
 }
@@ -106,6 +94,7 @@ export function ExpenseSpreadsheet({
   expenses: initialExpenses,
   properties,
   departments,
+  accounts,
   userRole,
   defaultPropertyId,
 }: Props) {
@@ -120,7 +109,7 @@ export function ExpenseSpreadsheet({
     issue_date: today,
     property_id: defaultPropertyId ?? properties[0]?.id ?? '',
     department_id: '',
-    category: '',
+    account_id: '',
     supplier: '',
     document_type: '',
     amount_net: '',
@@ -153,7 +142,7 @@ export function ExpenseSpreadsheet({
     if (!newRow.issue_date) errs.issue_date = true
     if (isCO && !newRow.property_id) errs.property_id = true
     if (!newRow.department_id) errs.department_id = true
-    if (!newRow.category) errs.category = true
+    if (!newRow.account_id) errs.account_id = true
     if (!newRow.supplier.trim()) errs.supplier = true
     if (!newRow.document_type) errs.document_type = true
     if (!newRow.amount_net || parseFloat(newRow.amount_net) <= 0) errs.amount_net = true
@@ -173,7 +162,7 @@ export function ExpenseSpreadsheet({
     const body = {
       property_id: newRow.property_id || defaultPropertyId,
       department_id: newRow.department_id,
-      category: newRow.category,
+      account_id: newRow.account_id,
       supplier: newRow.supplier.trim(),
       document_type: newRow.document_type,
       issue_date: newRow.issue_date,
@@ -231,7 +220,7 @@ export function ExpenseSpreadsheet({
         issue_date: today,
         property_id: defaultPropertyId ?? properties[0]?.id ?? '',
         department_id: '',
-        category: '',
+        account_id: '',
         supplier: '',
         document_type: '',
         amount_net: '',
@@ -268,7 +257,7 @@ export function ExpenseSpreadsheet({
                 <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Обект</th>
               )}
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Отдел</th>
-              <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Категория</th>
+              <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Сметка</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Доставчик</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Документ</th>
               <th className="px-2 py-1.5 text-right font-medium text-muted-foreground whitespace-nowrap">Нето</th>
@@ -306,7 +295,7 @@ export function ExpenseSpreadsheet({
                   {expense.departments.name}
                 </td>
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
-                  {categoryLabels[expense.category]}
+                  {expense.usali_accounts ? `${expense.usali_accounts.code} ${expense.usali_accounts.name}` : '—'}
                 </td>
                 <td className="px-2 py-1 text-muted-foreground max-w-[140px] truncate">
                   {expense.supplier}
@@ -373,14 +362,18 @@ export function ExpenseSpreadsheet({
                 </td>
                 <td className="px-1 py-1 min-w-[110px]">
                   <select
-                    value={newRow.category}
-                    onChange={(e) => setField('category', e.target.value)}
-                    className={errors.category ? inputErrorClass : selectClass}
+                    value={newRow.account_id}
+                    onChange={e => setField('account_id', e.target.value)}
+                    className="w-full bg-transparent text-xs border-0 focus:ring-1 focus:ring-primary px-1 py-0.5"
                   >
-                    <option value="">Категория</option>
-                    {(Object.keys(categoryLabels) as ExpenseCategory[]).map((k) => (
-                      <option key={k} value={k}>{categoryLabels[k]}</option>
-                    ))}
+                    <option value="">Сметка...</option>
+                    {accounts
+                      .filter(a => a.account_type === 'EXPENSE' && a.level === 3)
+                      .map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.code} {a.name}
+                        </option>
+                      ))}
                   </select>
                 </td>
                 <td className="px-1 py-1 min-w-[120px]">
