@@ -83,7 +83,7 @@ export function ExpenseList({ expenses }: Props) {
               {expense.supplier}
             </TableCell>
             <TableCell className="text-muted-foreground">
-              {expense.usali_accounts ? `${expense.usali_accounts.code} ${expense.usali_accounts.name}` : '—'}
+              {expense.usali_accounts?.name ?? '—'}
             </TableCell>
             <TableCell className="text-right font-mono">
               {expense.total_amount.toFixed(2)}

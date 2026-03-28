@@ -164,7 +164,7 @@ export function ExpenseForm({ propertyId, accounts }: Props) {
                 <SelectContent>
                   {accounts.filter(a => a.level === 3 && !isHidden(a.id)).map(a => (
                     <SelectItem key={a.id} value={a.id}>
-                      {a.code} {a.name}
+                      {a.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -277,7 +277,7 @@ export function ExpenseSpreadsheet({
                   </td>
                 )}
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
-                  {expense.usali_accounts ? `${expense.usali_accounts.code} ${expense.usali_accounts.name}` : '—'}
+                  {expense.usali_accounts?.name ?? '—'}
                 </td>
                 <td className="px-2 py-1 text-muted-foreground max-w-[140px] truncate">
                   {expense.supplier}
@@ -341,7 +341,7 @@ export function ExpenseSpreadsheet({
                       .filter(a => a.account_type === 'EXPENSE' && a.level === 3 && !isHidden(a.id))
                       .map(a => (
                         <option key={a.id} value={a.id}>
-                          {a.code} {a.name}
+                          {a.name}
                         </option>
                       ))}
                   </select>

@@ -94,7 +94,7 @@ export default async function IncomeDetailPage({ params }: Props) {
           {entry.usali_accounts && (
             <div>
               <span className="text-muted-foreground">Сметка: </span>
-              {`${entry.usali_accounts.code} ${entry.usali_accounts.name}`}
+              {entry.usali_accounts.name}
             </div>
           )}
         </CardContent>

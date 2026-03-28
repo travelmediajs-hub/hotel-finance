@@ -76,7 +76,7 @@ export function ExpenseView({ expense }: Props) {
           </div>
           <div>
             <span className="text-muted-foreground">Сметка: </span>
-            {expense.usali_accounts ? `${expense.usali_accounts.code} ${expense.usali_accounts.name}` : '—'}
+            {expense.usali_accounts?.name ?? '—'}
           </div>
           {expense.supplier_eik && (
             <div>

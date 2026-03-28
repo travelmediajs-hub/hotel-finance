@@ -222,7 +222,7 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
                   <SelectContent>
                     {accounts.filter(a => a.level === 3 && !isHidden(a.id)).map(a => (
                       <SelectItem key={a.id} value={a.id}>
-                        {a.code} {a.name}
+                        {a.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

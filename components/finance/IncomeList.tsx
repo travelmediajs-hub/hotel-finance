@@ -79,7 +79,7 @@ export function IncomeList({ entries }: Props) {
               {typeLabels[entry.type]}
             </TableCell>
             <TableCell className="text-muted-foreground">
-              {entry.usali_accounts ? `${entry.usali_accounts.code} ${entry.usali_accounts.name}` : '—'}
+              {entry.usali_accounts?.name ?? '—'}
             </TableCell>
             <TableCell className="text-right font-mono">
               {entry.amount.toFixed(2)} лв.

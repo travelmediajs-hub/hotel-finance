@@ -209,7 +209,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
                   {typeLabels[entry.type]}
                 </td>
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
-                  {entry.usali_accounts ? `${entry.usali_accounts.code} ${entry.usali_accounts.name}` : '—'}
+                  {entry.usali_accounts?.name ?? '—'}
                 </td>
                 <td className="px-2 py-1 text-right font-mono whitespace-nowrap">
                   {entry.amount.toFixed(2)} лв.
@@ -296,7 +296,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
                         .filter(a => a.account_type === 'REVENUE' && a.level === 3 && !isHidden(a.id))
                         .map(a => (
                           <option key={a.id} value={a.id}>
-                            {a.code} {a.name}
+                            {a.name}
                           </option>
                         ))}
                     </select>
