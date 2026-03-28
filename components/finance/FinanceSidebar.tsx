@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -8,9 +10,16 @@ import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   Building2, LayoutDashboard, FileText, FileCheck, Receipt, Wallet,
   Landmark, ArrowRightLeft, TrendingUp, MessageSquare,
-  CalendarDays,
+  CalendarDays, Eye, Package, BookOpen, BarChart3,
 } from 'lucide-react'
 import type { UserRole } from '@/types/finance'
 
@@ -29,26 +38,48 @@ const navItems: NavItem[] = [
   { href: '/finance/withdrawals', label: 'Тегления', icon: Wallet, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
   { href: '/finance/cash-flow', label: 'Парични потоци', icon: ArrowRightLeft, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/income', label: 'Приходи', icon: TrendingUp, roles: ['ADMIN_CO', 'FINANCE_CO'] },
+  { href: '/finance/in-transit', label: 'Обръщения', icon: Package, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/banking', label: 'Банки и кредити', icon: Landmark, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/monthly', label: 'Месечен отчет', icon: CalendarDays, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
+  { href: '/finance/chart-of-accounts', label: 'Сметкоплан', icon: BookOpen, roles: ['ADMIN_CO'] },
+  { href: '/finance/usali-reports', label: 'USALI Отчети', icon: BarChart3, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/properties', label: 'Обекти', icon: Building2, roles: ['ADMIN_CO'] },
 ]
+
+const roleLabels: Record<UserRole, string> = {
+  ADMIN_CO: 'Администратор',
+  FINANCE_CO: 'Финанси ЦО',
+  MANAGER: 'Управител',
+  DEPT_HEAD: 'Началник отдел',
+}
 
 interface Props {
   userFullName: string
   userRole: UserRole
+  realRole: UserRole
+  isSimulating: boolean
 }
 
-export function FinanceSidebar({ userFullName, userRole }: Props) {
+export function FinanceSidebar({ userFullName, userRole, realRole, isSimulating }: Props) {
   const pathname = usePathname()
+  const router = useRouter()
+  const [switching, setSwitching] = useState(false)
 
   const visibleItems = navItems.filter(item => item.roles.includes(userRole))
 
-  const roleLabels: Record<UserRole, string> = {
-    ADMIN_CO: 'Администратор',
-    FINANCE_CO: 'Финанси ЦО',
-    MANAGER: 'Управител',
-    DEPT_HEAD: 'Началник отдел',
+  async function switchRole(newRole: string) {
+    if (!newRole) return
+    setSwitching(true)
+    try {
+      await fetch('/api/finance/simulate-role', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      })
+      router.refresh()
+    } finally {
+      setSwitching(false)
+    }
   }
 
   return (
@@ -59,6 +90,45 @@ export function FinanceSidebar({ userFullName, userRole }: Props) {
       </div>
 
       <Separator className="bg-border" />
+
+      {/* Role simulator — only for real ADMIN_CO */}
+      {realRole === 'ADMIN_CO' && (
+        <>
+          <div className="px-3 py-2">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Eye className="h-3 w-3 text-amber-500" />
+              <span className="text-[10px] font-medium text-amber-500 uppercase tracking-wider">
+                Симулация
+              </span>
+            </div>
+            <Select
+              value={userRole}
+              onValueChange={(v) => v && switchRole(v)}
+              disabled={switching}
+            >
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(roleLabels) as UserRole[]).map(r => (
+                  <SelectItem key={r} value={r} className="text-xs">
+                    {roleLabels[r]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator className="bg-border" />
+        </>
+      )}
+
+      {isSimulating && (
+        <div className="mx-3 mt-2 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30">
+          <p className="text-[10px] text-amber-500 text-center">
+            Виждате като: {roleLabels[userRole]}
+          </p>
+        </div>
+      )}
 
       <ScrollArea className="flex-1 p-2">
         <nav className="space-y-1">
