@@ -3,10 +3,7 @@ import { z } from 'zod'
 const expenseBaseSchema = z.object({
   property_id: z.string().uuid(),
   department_id: z.string().uuid(),
-  category: z.enum([
-    'CONSUMABLES', 'SALARIES', 'FOOD_KITCHEN', 'FUEL', 'TAXES_FEES',
-    'MAINTENANCE', 'UTILITIES', 'MARKETING', 'INSURANCE', 'ACCOUNTING', 'OTHER',
-  ]),
+  account_id: z.string().uuid(),
   supplier: z.string().min(1),
   supplier_eik: z.string().nullable().optional(),
   document_type: z.enum(['INVOICE', 'EXPENSE_ORDER', 'RECEIPT', 'NO_DOCUMENT']),
@@ -27,7 +24,6 @@ export const createExpenseSchema = expenseBaseSchema.refine(
 
 export const updateExpenseSchema = expenseBaseSchema.partial()
 
-// Rule #5: attachment required before SENT_TO_CO (except EXPENSE_ORDER with note)
 export const submitExpenseSchema = expenseBaseSchema.refine(
   (data) => {
     if (data.document_type === 'EXPENSE_ORDER' && data.note && data.note.length > 0) return true

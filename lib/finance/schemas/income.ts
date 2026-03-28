@@ -16,16 +16,8 @@ export const createIncomeEntrySchema = z.object({
   period_to: z.string().date().nullable().optional(),
   loan_id: z.string().uuid().nullable().optional(),
   attachment_url: z.string().url().nullable().optional(),
-  income_category: z.enum([
-    'ACCOMMODATION', 'FB', 'SPA', 'FEES', 'COMMISSIONS', 'OTHER',
-  ]).nullable().optional(),
+  account_id: z.string().uuid(),
 }).refine(
-  (data) => {
-    const isIncome = data.type.startsWith('INC_')
-    return !isIncome || data.income_category != null
-  },
-  { message: 'Категория е задължителна за приходни типове', path: ['income_category'] }
-).refine(
   (data) => data.type !== 'CF_CREDIT' || data.loan_id != null,
   { message: 'Кредит е задължителен при CF_CREDIT', path: ['loan_id'] }
 )

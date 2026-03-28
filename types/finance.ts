@@ -18,10 +18,6 @@ export type DailyReportStatus =
 export type ConsolidationStatus =
   | 'IN_PROGRESS' | 'SENT_TO_CO' | 'APPROVED' | 'RETURNED' | 'CORRECTED'
 
-export type ExpenseCategory =
-  | 'CONSUMABLES' | 'SALARIES' | 'FOOD_KITCHEN' | 'FUEL' | 'TAXES_FEES'
-  | 'MAINTENANCE' | 'UTILITIES' | 'MARKETING' | 'INSURANCE' | 'ACCOUNTING' | 'OTHER'
-
 export type DocumentType = 'INVOICE' | 'EXPENSE_ORDER' | 'RECEIPT' | 'NO_DOCUMENT'
 
 export type PaymentMethod = 'BANK_TRANSFER' | 'CASH' | 'CARD' | 'OTHER'
@@ -77,9 +73,6 @@ export type IncomeEntryType =
   | 'INC_BANK' | 'INC_CASH' | 'INC_ADV' | 'INC_DEP' | 'INC_OTHER'
   | 'CF_CREDIT' | 'CF_TRANSFER'
 
-export type IncomeCategory =
-  | 'ACCOMMODATION' | 'FB' | 'SPA' | 'FEES' | 'COMMISSIONS' | 'OTHER'
-
 export type IncomePaymentMethod = 'BANK' | 'CASH'
 
 export type IncomeEntryStatus = 'ENTERED' | 'CONFIRMED' | 'ADVANCE' | 'REALIZED'
@@ -94,6 +87,10 @@ export type NotificationType =
   | 'LOAN_PAYMENT_3D' | 'MONEY_RECEIVED_UNCONFIRMED' | 'CHAIN_UNCLOSED_48H'
 
 export type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT'
+
+// USALI types
+export type UsaliDepartmentCategory = 'OPERATED' | 'UNDISTRIBUTED' | 'FIXED'
+export type UsaliAccountType = 'REVENUE' | 'EXPENSE'
 
 // ============================================================
 // INTERFACES
@@ -158,6 +155,7 @@ export interface Department {
   manager_id: string
   authorized_person_id: string | null
   fiscal_device_id: string | null
+  usali_template_id: string | null
   status: ActiveStatus
   created_at: string
   updated_at: string
@@ -237,7 +235,7 @@ export interface Expense {
   id: string
   property_id: string
   department_id: string
-  category: ExpenseCategory
+  account_id: string
   supplier: string
   supplier_eik: string | null
   document_type: DocumentType
@@ -474,7 +472,7 @@ export interface IncomeEntry {
   period_to: string | null
   loan_id: string | null
   attachment_url: string | null
-  income_category: IncomeCategory | null
+  account_id: string
   is_advance_realized: boolean
   status: IncomeEntryStatus
   created_by_id: string
@@ -507,6 +505,52 @@ export interface Notification {
   read_at: string | null
   email_sent: boolean
   email_sent_at: string | null
+  created_at: string
+}
+
+export interface UsaliDepartmentTemplate {
+  id: string
+  code: string
+  name: string
+  category: UsaliDepartmentCategory
+  sort_order: number
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface UsaliAccount {
+  id: string
+  code: string
+  name: string
+  account_type: UsaliAccountType
+  level: number
+  parent_id: string | null
+  template_id: string
+  is_active: boolean
+  sort_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface UsaliBudget {
+  id: string
+  property_id: string
+  account_id: string
+  year: number
+  month: number
+  amount: number
+  created_at: string
+  updated_at: string
+}
+
+export interface PropertyStatistics {
+  id: string
+  property_id: string
+  date: string
+  rooms_available: number
+  rooms_sold: number
+  guests: number
   created_at: string
 }
 
