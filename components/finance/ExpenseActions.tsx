@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import type { ExpenseStatus, UserRole } from '@/types/finance'
-import { isCORole } from '@/lib/finance/auth'
+import { isCORole } from '@/lib/finance/roles'
 
 interface Props {
   expenseId: string

@@ -2,6 +2,8 @@
 import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import type { UserRole } from '@/types/finance'
+import { isCORole } from './roles'
+export { isCORole } from './roles'
 
 export const SIMULATE_ROLE_COOKIE = 'finance_simulate_role'
 const VALID_ROLES: UserRole[] = ['ADMIN_CO', 'FINANCE_CO', 'MANAGER', 'DEPT_HEAD']
@@ -68,11 +70,6 @@ export async function requireRole(
   if (!user) return null
   if (!allowedRoles.includes(user.role)) return null
   return user
-}
-
-/** CO roles can see everything; others are scoped to their properties */
-export function isCORole(role: UserRole): boolean {
-  return role === 'ADMIN_CO' || role === 'FINANCE_CO'
 }
 
 /**

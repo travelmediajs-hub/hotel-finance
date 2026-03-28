@@ -15,21 +15,15 @@ import type { DailyReportStatus } from '@/types/finance'
 const reportStatusLabels: Record<DailyReportStatus, string> = {
   DRAFT: 'Чернова',
   SUBMITTED: 'Изпратен',
-  CONFIRMED: 'Потвърден',
   RETURNED: 'Върнат',
-  SENT_TO_CO: 'Изпратен към ЦО',
   APPROVED: 'Одобрен',
-  CORRECTED: 'Коригиран',
 }
 
 const reportStatusVariants: Record<DailyReportStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   DRAFT: 'secondary',
   SUBMITTED: 'default',
-  CONFIRMED: 'default',
   RETURNED: 'destructive',
-  SENT_TO_CO: 'default',
   APPROVED: 'outline',
-  CORRECTED: 'outline',
 }
 
 function fmt(n: number): string {

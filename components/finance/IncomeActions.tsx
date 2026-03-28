@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import type { IncomeEntryStatus, IncomeEntryType, UserRole } from '@/types/finance'
-import { isCORole } from '@/lib/finance/auth'
+import { isCORole } from '@/lib/finance/roles'
 
 interface Props {
   entryId: string
