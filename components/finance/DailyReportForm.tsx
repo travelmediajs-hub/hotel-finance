@@ -8,144 +8,210 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import type { Department, POSTerminal } from '@/types/finance'
 
-interface CashLine {
-  department_id: string
-  department_name: string
-  cash_income: number
-  cash_return: number
+interface DepartmentInfo {
+  id: string
+  name: string
+  fiscal_device_id: string | null
 }
 
-interface POSLine {
-  pos_terminal_id: string
-  terminal_label: string
-  amount: number
-  return_amount: number
+interface LineData {
+  department_id: string
+  department_name: string
+  has_fiscal: boolean
+  cash_income: number
+  cash_refund: number
+  pos_income: number
+  pos_refund: number
+  z_cash: number
+  z_pos: number
+  z_attachment_url: string
+  pos_report_amount: number
 }
 
 interface Props {
-  department: Department
-  property_id: string
-  departments: Department[]
-  posTerminals: POSTerminal[]
+  reportId: string
+  propertyName: string
+  departments: DepartmentInfo[]
+  initialLines?: Array<{
+    department_id: string
+    cash_income: number
+    cash_refund: number
+    pos_income: number
+    pos_refund: number
+    z_cash: number
+    z_pos: number
+    z_attachment_url: string | null
+    pos_report_amount: number
+  }>
+  generalAttachmentUrl?: string | null
+  diffExplanation?: string | null
+  status: string
+  userRole: string
+  userDepartmentIds?: string[]
 }
 
-function toDateString(d: Date): string {
-  return d.toISOString().slice(0, 10)
+function fmt(n: number): string {
+  return n.toFixed(2)
 }
 
-export function DailyReportForm({ department, property_id, departments, posTerminals }: Props) {
+export function DailyReportForm({
+  reportId,
+  propertyName,
+  departments,
+  initialLines,
+  generalAttachmentUrl: initialGeneralAttachment,
+  diffExplanation: initialDiffExplanation,
+  status,
+  userRole,
+  userDepartmentIds,
+}: Props) {
   const router = useRouter()
 
-  const today = toDateString(new Date())
-  const yesterday = toDateString(new Date(Date.now() - 86_400_000))
+  const [lines, setLines] = useState<LineData[]>(
+    departments.map((dept) => {
+      const existing = initialLines?.find((l) => l.department_id === dept.id)
+      return {
+        department_id: dept.id,
+        department_name: dept.name,
+        has_fiscal: !!dept.fiscal_device_id,
+        cash_income: existing?.cash_income ?? 0,
+        cash_refund: existing?.cash_refund ?? 0,
+        pos_income: existing?.pos_income ?? 0,
+        pos_refund: existing?.pos_refund ?? 0,
+        z_cash: existing?.z_cash ?? 0,
+        z_pos: existing?.z_pos ?? 0,
+        z_attachment_url: existing?.z_attachment_url ?? '',
+        pos_report_amount: existing?.pos_report_amount ?? 0,
+      }
+    })
+  )
 
-  const [date, setDate] = useState(today)
-  const [cashLines, setCashLines] = useState<CashLine[]>(
-    departments.map((d) => ({
-      department_id: d.id,
-      department_name: d.name,
-      cash_income: 0,
-      cash_return: 0,
-    }))
-  )
-  const [posLines, setPosLines] = useState<POSLine[]>(
-    posTerminals.map((t) => ({
-      pos_terminal_id: t.id,
-      terminal_label: `${t.tid} (${t.bank})`,
-      amount: 0,
-      return_amount: 0,
-    }))
-  )
-  const [zCash, setZCash] = useState(0)
-  const [zPos, setZPos] = useState(0)
-  const [zAttachment, setZAttachment] = useState('')
-  const [diffExplanation, setDiffExplanation] = useState('')
+  const [generalAttachment, setGeneralAttachment] = useState(initialGeneralAttachment ?? '')
+  const [diffExplanation, setDiffExplanation] = useState(initialDiffExplanation ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [savingLine, setSavingLine] = useState<string | null>(null)
 
-  // Calculated values
-  const totalCashNet = cashLines.reduce((s, l) => s + l.cash_income - l.cash_return, 0)
-  const totalPOSNet = posLines.reduce((s, l) => s + l.amount - l.return_amount, 0)
-  const cashDiff = totalCashNet - zCash
-  const posDiff = totalPOSNet - zPos
-  const totalDiff = cashDiff + posDiff
+  const totalCashNet = lines.reduce((s, l) => s + l.cash_income - l.cash_refund, 0)
+  const totalPosNet = lines.reduce((s, l) => s + l.pos_income - l.pos_refund, 0)
+  const totalCashDiff = lines.reduce((s, l) => s + (l.cash_income - l.cash_refund - l.z_cash), 0)
+  const totalPosDiff = lines.reduce((s, l) => s + (l.pos_income - l.pos_refund - l.pos_report_amount), 0)
+  const totalDiff = totalCashDiff + totalPosDiff
 
-  function updateCashLine(index: number, field: 'cash_income' | 'cash_return', value: number) {
-    setCashLines((prev) => prev.map((l, i) => (i === index ? { ...l, [field]: value } : l)))
-  }
+  const canEdit = status === 'DRAFT' || status === 'RETURNED'
+  const canSubmit = canEdit && (userRole === 'MANAGER' || userRole === 'ADMIN_CO')
+  const isDeptHead = userRole === 'DEPT_HEAD'
 
-  function updatePosLine(index: number, field: 'amount' | 'return_amount', value: number) {
-    setPosLines((prev) => prev.map((l, i) => (i === index ? { ...l, [field]: value } : l)))
-  }
-
-  function formatNum(n: number): string {
-    return n.toFixed(2)
-  }
-
-  async function handleSave(isDraft: boolean) {
-    setError(null)
-    setLoading(true)
-
-    const body = {
-      department_id: department.id,
-      property_id,
-      date,
-      lines: cashLines.map((l) => ({
-        department_id: l.department_id,
-        cash_income: l.cash_income,
-        cash_return: l.cash_return,
-      })),
-      pos_entries: posLines.map((l) => ({
-        pos_terminal_id: l.pos_terminal_id,
-        amount: l.amount,
-        return_amount: l.return_amount,
-      })),
-      z_report: {
-        cash_amount: zCash,
-        pos_amount: zPos,
-        attachment_url: zAttachment,
-      },
-      diff_explanation: totalDiff !== 0 ? diffExplanation || null : null,
+  function canEditLine(deptId: string): boolean {
+    if (!canEdit) return false
+    if (isDeptHead && userDepartmentIds) {
+      return userDepartmentIds.includes(deptId)
     }
+    return true
+  }
+
+  function updateLine(deptId: string, field: keyof LineData, value: number | string) {
+    setLines((prev) =>
+      prev.map((l) => (l.department_id === deptId ? { ...l, [field]: value } : l))
+    )
+  }
+
+  async function saveLine(deptId: string) {
+    const line = lines.find((l) => l.department_id === deptId)
+    if (!line) return
+
+    setSavingLine(deptId)
+    setError(null)
 
     try {
-      const res = await fetch('/api/finance/daily-reports', {
-        method: 'POST',
+      const res = await fetch(`/api/finance/daily-reports/${reportId}/lines`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          department_id: deptId,
+          cash_income: line.cash_income,
+          cash_refund: line.cash_refund,
+          pos_income: line.pos_income,
+          pos_refund: line.pos_refund,
+          z_cash: line.z_cash,
+          z_pos: line.z_pos,
+          z_attachment_url: line.z_attachment_url || null,
+          pos_report_amount: line.pos_report_amount,
+        }),
       })
 
       if (!res.ok) {
         const data = await res.json()
-        const details = data.details?.fieldErrors
-          ? Object.entries(data.details.fieldErrors)
-              .map(([field, msgs]) => `${field}: ${(msgs as string[]).join(', ')}`)
-              .join(' | ')
-          : null
-        setError(details ?? data.message ?? data.error ?? 'Грешка при запис')
-        return
+        setError(data.message ?? 'Грешка при запис')
       }
+    } catch {
+      setError('Грешка при връзка със сървъра')
+    } finally {
+      setSavingLine(null)
+    }
+  }
 
-      const saved = await res.json()
+  async function saveAllLines() {
+    setError(null)
+    setLoading(true)
 
-      if (!isDraft) {
-        const submitRes = await fetch(`/api/finance/daily-reports/${saved.id}/submit`, {
-          method: 'POST',
+    try {
+      for (const line of lines) {
+        if (!canEditLine(line.department_id)) continue
+
+        const res = await fetch(`/api/finance/daily-reports/${reportId}/lines`, {
+          method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            department_id: line.department_id,
+            cash_income: line.cash_income,
+            cash_refund: line.cash_refund,
+            pos_income: line.pos_income,
+            pos_refund: line.pos_refund,
+            z_cash: line.z_cash,
+            z_pos: line.z_pos,
+            z_attachment_url: line.z_attachment_url || null,
+            pos_report_amount: line.pos_report_amount,
+          }),
         })
 
-        if (!submitRes.ok) {
-          const submitData = await submitRes.json()
-          setError(submitData.message ?? submitData.error ?? 'Грешка при изпращане')
-          // Report was saved but not submitted -- redirect to it anyway
-          router.push(`/finance/daily-reports/${saved.id}`)
+        if (!res.ok) {
+          const data = await res.json()
+          setError(data.message ?? 'Грешка при запис')
           return
         }
       }
+    } catch {
+      setError('Грешка при връзка със сървъра')
+    } finally {
+      setLoading(false)
+    }
+  }
 
-      router.push(`/finance/daily-reports/${saved.id}`)
+  async function handleSubmit() {
+    await saveAllLines()
+    if (error) return
+
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/finance/daily-reports/${reportId}/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          general_attachment_url: generalAttachment || null,
+          diff_explanation: totalDiff !== 0 ? diffExplanation : null,
+        }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.message ?? 'Грешка при изпращане')
+        return
+      }
+
+      router.push(`/finance/daily-reports/${reportId}`)
+      router.refresh()
     } catch {
       setError('Грешка при връзка със сървъра')
     } finally {
@@ -155,6 +221,25 @@ export function DailyReportForm({ department, property_id, departments, posTermi
 
   const diffColor = (v: number) => (v !== 0 ? 'text-red-500' : 'text-green-500')
 
+  function numInput(
+    deptId: string,
+    field: keyof LineData,
+    value: number,
+    disabled: boolean
+  ) {
+    return (
+      <Input
+        type="number"
+        min={0}
+        step="0.01"
+        value={value || ''}
+        disabled={disabled}
+        onChange={(e) => updateLine(deptId, field, parseFloat(e.target.value) || 0)}
+        className="h-8 text-sm"
+      />
+    )
+  }
+
   return (
     <div className="space-y-6">
       {error && (
@@ -163,207 +248,170 @@ export function DailyReportForm({ department, property_id, departments, posTermi
         </p>
       )}
 
-      {/* А. Отдел и дата */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Отдел и дата</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="department_name">Отдел</Label>
-              <Input id="department_name" value={department.name} disabled />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="report_date">Дата *</Label>
-              <Input
-                id="report_date"
-                type="date"
-                value={date}
-                min={yesterday}
-                max={today}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {lines.map((line) => {
+        const editable = canEditLine(line.department_id)
+        const cashNet = line.cash_income - line.cash_refund
+        const posNet = line.pos_income - line.pos_refund
+        const cashDiff = cashNet - line.z_cash
+        const posDiff = posNet - line.pos_report_amount
+        const lineDiff = cashDiff + posDiff
+        const isSaving = savingLine === line.department_id
 
-      {/* Б. Приходи в брой */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Б. Приходи в брой</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-[1fr_120px_120px_100px] gap-2 text-sm">
-            <div className="font-medium">Отдел</div>
-            <div className="font-medium">Приход</div>
-            <div className="font-medium">Сторно</div>
-            <div className="font-medium">Нето</div>
-
-            {cashLines.map((line, i) => (
-              <div key={line.department_id} className="contents">
-                <div className="flex items-center">{line.department_name}</div>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={line.cash_income || ''}
-                  onChange={(e) => updateCashLine(i, 'cash_income', parseFloat(e.target.value) || 0)}
-                />
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={line.cash_return || ''}
-                  onChange={(e) => updateCashLine(i, 'cash_return', parseFloat(e.target.value) || 0)}
-                />
-                <div className="flex items-center justify-end">
-                  {formatNum(line.cash_income - line.cash_return)}
-                </div>
+        return (
+          <Card key={line.department_id}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">{line.department_name}</CardTitle>
+                {editable && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isSaving}
+                    onClick={() => saveLine(line.department_id)}
+                  >
+                    {isSaving ? 'Запис...' : 'Запази'}
+                  </Button>
+                )}
               </div>
-            ))}
-
-            <Separator className="col-span-4 my-1" />
-
-            <div className="font-medium">Общо каса</div>
-            <div />
-            <div />
-            <div className="flex items-center justify-end font-medium">
-              {formatNum(totalCashNet)}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* В. Приходи по POS терминали */}
-      {posLines.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">В. Приходи по POS терминали</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-[1fr_120px_120px_100px] gap-2 text-sm">
-              <div className="font-medium">Терминал</div>
-              <div className="font-medium">Сума</div>
-              <div className="font-medium">Сторно</div>
-              <div className="font-medium">Нето</div>
-
-              {posLines.map((line, i) => (
-                <div key={line.pos_terminal_id} className="contents">
-                  <div className="flex items-center">{line.terminal_label}</div>
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={line.amount || ''}
-                    onChange={(e) => updatePosLine(i, 'amount', parseFloat(e.target.value) || 0)}
-                  />
-                  <Input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={line.return_amount || ''}
-                    onChange={(e) => updatePosLine(i, 'return_amount', parseFloat(e.target.value) || 0)}
-                  />
-                  <div className="flex items-center justify-end">
-                    {formatNum(line.amount - line.return_amount)}
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-[140px_1fr_1fr_100px] gap-2 text-sm">
+                <div className="flex items-center font-medium">Каса</div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Приход</Label>
+                  {numInput(line.department_id, 'cash_income', line.cash_income, !editable)}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Сторно</Label>
+                  {numInput(line.department_id, 'cash_refund', line.cash_refund, !editable)}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Нето</Label>
+                  <div className="h-8 flex items-center justify-end font-mono text-sm">
+                    {fmt(cashNet)}
                   </div>
                 </div>
-              ))}
 
-              <Separator className="col-span-4 my-1" />
-
-              <div className="font-medium">Общо POS</div>
-              <div />
-              <div />
-              <div className="flex items-center justify-end font-medium">
-                {formatNum(totalPOSNet)}
+                <div className="flex items-center font-medium">ПОС</div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Приход</Label>
+                  {numInput(line.department_id, 'pos_income', line.pos_income, !editable)}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Сторно</Label>
+                  {numInput(line.department_id, 'pos_refund', line.pos_refund, !editable)}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Нето</Label>
+                  <div className="h-8 flex items-center justify-end font-mono text-sm">
+                    {fmt(posNet)}
+                  </div>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
-      {/* Г. Фискален Z-отчет */}
+              <Separator className="my-3" />
+
+              <div className="grid grid-cols-[140px_1fr_1fr_100px] gap-2 text-sm">
+                <div className="flex items-center font-medium">Z-отчет</div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Каса от Z</Label>
+                  {numInput(line.department_id, 'z_cash', line.z_cash, !editable)}
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">ПОС от Z</Label>
+                  {numInput(line.department_id, 'z_pos', line.z_pos, !editable)}
+                </div>
+                <div />
+
+                <div className="flex items-center font-medium">ПОС отчет</div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Сума от банка</Label>
+                  {numInput(line.department_id, 'pos_report_amount', line.pos_report_amount, !editable)}
+                </div>
+                <div />
+                <div />
+              </div>
+
+              {line.has_fiscal && (
+                <div className="mt-3 space-y-1">
+                  <Label className="text-xs text-muted-foreground">Z-отчет файл</Label>
+                  <Input
+                    type="url"
+                    placeholder="https://..."
+                    value={line.z_attachment_url}
+                    disabled={!editable}
+                    onChange={(e) => updateLine(line.department_id, 'z_attachment_url', e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                </div>
+              )}
+
+              <div className="mt-3 flex gap-6 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Каса разл: </span>
+                  <span className={diffColor(cashDiff)}>{fmt(cashDiff)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">ПОС разл: </span>
+                  <span className={diffColor(posDiff)}>{fmt(posDiff)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Общо: </span>
+                  <span className={`font-medium ${diffColor(lineDiff)}`}>{fmt(lineDiff)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })}
+
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Г. Фискален Z-отчет</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Обобщение — {propertyName}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="z_cash">Каса от Z</Label>
-              <Input
-                id="z_cash"
-                type="number"
-                min={0}
-                step="0.01"
-                value={zCash || ''}
-                onChange={(e) => setZCash(parseFloat(e.target.value) || 0)}
-              />
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="space-y-1">
+              <div className="text-muted-foreground">Общо каса нето</div>
+              <div className="text-lg font-medium font-mono">{fmt(totalCashNet)}</div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="z_pos">POS от Z</Label>
-              <Input
-                id="z_pos"
-                type="number"
-                min={0}
-                step="0.01"
-                value={zPos || ''}
-                onChange={(e) => setZPos(parseFloat(e.target.value) || 0)}
-              />
+            <div className="space-y-1">
+              <div className="text-muted-foreground">Общо ПОС нето</div>
+              <div className="text-lg font-medium font-mono">{fmt(totalPosNet)}</div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="z_total">Общо Z</Label>
-              <Input id="z_total" value={formatNum(zCash + zPos)} disabled />
+            <div className="space-y-1">
+              <div className="text-muted-foreground">Общо</div>
+              <div className="text-lg font-medium font-mono">{fmt(totalCashNet + totalPosNet)}</div>
             </div>
           </div>
-          <div className="mt-4 space-y-2">
-            <Label htmlFor="z_attachment">URL на прикачен Z-отчет *</Label>
-            <Input
-              id="z_attachment"
-              type="url"
-              placeholder="https://..."
-              value={zAttachment}
-              onChange={(e) => setZAttachment(e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Д. Разлики */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Д. Разлики</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <Separator className="my-3" />
+
+          <div className="grid grid-cols-3 gap-4 text-sm">
             <div className="space-y-1">
               <div className="text-muted-foreground">Разлика каса</div>
-              <div className={`text-lg font-medium ${diffColor(cashDiff)}`}>
-                {formatNum(cashDiff)}
+              <div className={`text-lg font-medium font-mono ${diffColor(totalCashDiff)}`}>
+                {fmt(totalCashDiff)}
               </div>
             </div>
             <div className="space-y-1">
-              <div className="text-muted-foreground">Разлика POS</div>
-              <div className={`text-lg font-medium ${diffColor(posDiff)}`}>
-                {formatNum(posDiff)}
+              <div className="text-muted-foreground">Разлика ПОС</div>
+              <div className={`text-lg font-medium font-mono ${diffColor(totalPosDiff)}`}>
+                {fmt(totalPosDiff)}
               </div>
             </div>
             <div className="space-y-1">
               <div className="text-muted-foreground">Обща разлика</div>
-              <div className={`text-lg font-medium ${diffColor(totalDiff)}`}>
-                {formatNum(totalDiff)}
+              <div className={`text-lg font-medium font-mono ${diffColor(totalDiff)}`}>
+                {fmt(totalDiff)}
               </div>
             </div>
           </div>
 
-          {totalDiff !== 0 && (
+          {totalDiff !== 0 && canEdit && (
             <div className="mt-4 space-y-2">
-              <Label htmlFor="diff_explanation">Обяснение за разликата *</Label>
+              <Label>Обяснение за разликата *</Label>
               <Textarea
-                id="diff_explanation"
                 value={diffExplanation}
                 onChange={(e) => setDiffExplanation(e.target.value)}
                 placeholder="Опишете причината за разликата..."
@@ -371,21 +419,36 @@ export function DailyReportForm({ department, property_id, departments, posTermi
               />
             </div>
           )}
+
+          {canEdit && (
+            <div className="mt-4 space-y-2">
+              <Label>Общ прикачен файл (незадължителен)</Label>
+              <Input
+                type="url"
+                placeholder="https://..."
+                value={generalAttachment}
+                onChange={(e) => setGeneralAttachment(e.target.value)}
+              />
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Бутони */}
-      <div className="flex gap-3">
-        <Button disabled={loading} onClick={() => handleSave(false)}>
-          {loading ? 'Запис...' : 'Изпрати отчет'}
-        </Button>
-        <Button variant="outline" disabled={loading} onClick={() => handleSave(true)}>
-          {loading ? 'Запис...' : 'Запази чернова'}
-        </Button>
-        <Button variant="ghost" type="button" onClick={() => router.back()}>
-          Отказ
-        </Button>
-      </div>
+      {canEdit && (
+        <div className="flex gap-3">
+          {canSubmit && (
+            <Button disabled={loading} onClick={handleSubmit}>
+              {loading ? 'Изпращане...' : 'Изпрати към ЦО'}
+            </Button>
+          )}
+          <Button variant="outline" disabled={loading} onClick={saveAllLines}>
+            {loading ? 'Запис...' : 'Запази всичко'}
+          </Button>
+          <Button variant="ghost" onClick={() => router.back()}>
+            Отказ
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
