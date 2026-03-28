@@ -114,7 +114,7 @@ export function ChartOfAccountsTree({ accounts: initialAccounts, templates: init
 
         <div className="ml-auto flex items-center gap-2">
           <span className="text-xs text-muted-foreground">Обект:</span>
-          <Select value={selectedPropertyId || '_all'} onValueChange={v => setSelectedPropertyId(v === '_all' ? '' : v)}>
+          <Select value={selectedPropertyId || '_all'} onValueChange={v => setSelectedPropertyId(v === '_all' ? '' : v ?? '')}>
             <SelectTrigger className="h-8 w-48 text-xs">
               <SelectValue placeholder="Всички (глобално)" />
             </SelectTrigger>

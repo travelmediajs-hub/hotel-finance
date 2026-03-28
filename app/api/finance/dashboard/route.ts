@@ -215,7 +215,7 @@ export async function GET() {
     supplier: exp.supplier,
     total_amount: exp.total_amount,
     due_date: exp.due_date,
-    property_name: (exp.properties as { name: string } | null)?.name ?? '',
+    property_name: ((exp.properties as unknown as { name: string }) ?? { name: '' }).name,
   }))
 
   // --- Pending reports counts ---
@@ -227,7 +227,7 @@ export async function GET() {
   // --- Unconfirmed collections (cash in properties, awaiting CO confirmation) ---
   const unconfirmed_collections = (unconfirmedCollectionsResult.data ?? []).map((col) => ({
     id: col.id,
-    property_name: (col.properties as { name: string } | null)?.name ?? '',
+    property_name: ((col.properties as unknown as { name: string }) ?? { name: '' }).name,
     amount: col.amount,
     collection_date: col.collection_date,
   }))
@@ -235,7 +235,7 @@ export async function GET() {
   // --- Unaccounted advances ---
   const unaccounted_advances = (unaccountedAdvancesResult.data ?? []).map((adv) => ({
     id: adv.id,
-    property_name: (adv.properties as { name: string } | null)?.name ?? '',
+    property_name: ((adv.properties as unknown as { name: string }) ?? { name: '' }).name,
     amount: adv.amount,
     sent_date: adv.sent_date,
     purpose: adv.purpose,
