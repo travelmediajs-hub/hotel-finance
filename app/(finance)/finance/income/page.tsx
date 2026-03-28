@@ -51,17 +51,17 @@ export default async function IncomePage() {
     supabase
       .from('properties')
       .select('id, name')
-      .eq('is_active', true)
+      .eq('status', 'ACTIVE')
       .order('name'),
     supabase
       .from('bank_accounts')
       .select('id, name, iban')
-      .eq('is_active', true)
+      .eq('status', 'ACTIVE')
       .order('name'),
     supabase
       .from('loans')
-      .select('id, bank, contract_number')
-      .eq('is_active', true)
+      .select('id, bank, name')
+      .eq('status', 'ACTIVE')
       .order('bank'),
     supabase
       .from('usali_accounts')

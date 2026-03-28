@@ -18,7 +18,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   const { data, error } = await supabase
     .from('income_entries')
     .select(
-      '*, properties(name), bank_accounts(name, iban), loans(bank, amount)'
+      '*, properties(name), bank_accounts(name, iban), loans(bank, amount), usali_accounts(code, name)'
     )
     .eq('id', id)
     .single()

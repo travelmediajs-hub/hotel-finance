@@ -70,7 +70,7 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
     e.preventDefault()
     setError(null)
 
-    if (!entryDate || !propertyId || !type || !paymentMethod || !payer.trim() || amount <= 0) {
+    if (!entryDate || !propertyId || !type || !paymentMethod || !payer.trim() || amount <= 0 || !accountId) {
       setError('Моля, попълнете всички задължителни полета.')
       return
     }
@@ -84,7 +84,7 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
       amount,
       payment_method: paymentMethod,
       payer: payer.trim(),
-      account_id: showCategory && accountId ? accountId : null,
+      account_id: accountId || null,
       bank_account_id: showBankAccount && bankAccountId ? bankAccountId : null,
       loan_id: showLoan && loanId ? loanId : null,
       period_from: periodFrom || null,
@@ -210,7 +210,7 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
               />
             </div>
 
-            {showCategory && (
+            {accounts.length > 0 && (
               <div className="space-y-2">
                 <Label>Сметка (USALI)</Label>
                 <Select value={accountId} onValueChange={(v) => v && setAccountId(v)}>

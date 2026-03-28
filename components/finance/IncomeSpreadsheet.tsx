@@ -19,7 +19,7 @@ interface Props {
   entries: IncomeEntryWithJoins[]
   properties: Array<{ id: string; name: string }>
   bankAccounts: Array<{ id: string; name: string; iban: string }>
-  loans: Array<{ id: string; bank: string; contract_number: string }>
+  loans: Array<{ id: string; bank: string; name: string }>
   accounts: Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>
   canCreate: boolean
 }
