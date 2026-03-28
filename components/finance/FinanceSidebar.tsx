@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import {
-  Building2, LayoutDashboard, FileText, Receipt, Wallet,
+  Building2, LayoutDashboard, FileText, FileCheck, Receipt, Wallet,
   Landmark, ArrowRightLeft, TrendingUp, MessageSquare,
   CalendarDays,
 } from 'lucide-react'
@@ -24,6 +24,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/finance/dashboard', label: 'Табло', icon: LayoutDashboard, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/daily-reports', label: 'Дневни отчети', icon: FileText, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER', 'DEPT_HEAD'] },
+  { href: '/finance/consolidations', label: 'Консолидации', icon: FileCheck, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
   { href: '/finance/expenses', label: 'Разходи', icon: Receipt, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
   { href: '/finance/withdrawals', label: 'Тегления', icon: Wallet, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
   { href: '/finance/cash-flow', label: 'Парични потоци', icon: ArrowRightLeft, roles: ['ADMIN_CO', 'FINANCE_CO'] },
