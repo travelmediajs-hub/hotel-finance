@@ -10,21 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import type { ExpenseCategory, DocumentType, PaymentMethod } from '@/types/finance'
+import type { DocumentType, PaymentMethod } from '@/types/finance'
 
-const categoryOptions: { value: ExpenseCategory; label: string }[] = [
-  { value: 'CONSUMABLES', label: 'Консумативи' },
-  { value: 'SALARIES', label: 'Заплати' },
-  { value: 'FOOD_KITCHEN', label: 'Кухня' },
-  { value: 'FUEL', label: 'Гориво' },
-  { value: 'TAXES_FEES', label: 'Данъци/Такси' },
-  { value: 'MAINTENANCE', label: 'Поддръжка' },
-  { value: 'UTILITIES', label: 'Комунални' },
-  { value: 'MARKETING', label: 'Маркетинг' },
-  { value: 'INSURANCE', label: 'Застраховки' },
-  { value: 'ACCOUNTING', label: 'Счетоводство' },
-  { value: 'OTHER', label: 'Друго' },
-]
+interface UsaliAccount {
+  id: string
+  code: string
+  name: string
+  level: number
+  account_type: string
+  parent_id: string | null
+}
 
 const documentTypeOptions: { value: DocumentType; label: string }[] = [
   { value: 'INVOICE', label: 'Фактура' },
@@ -43,18 +38,19 @@ const paymentMethodOptions: { value: PaymentMethod; label: string }[] = [
 interface Props {
   propertyId: string
   departments: { id: string; name: string }[]
+  accounts: UsaliAccount[]
 }
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function ExpenseForm({ propertyId, departments }: Props) {
+export function ExpenseForm({ propertyId, departments, accounts }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
 
   const [departmentId, setDepartmentId] = useState('')
-  const [category, setCategory] = useState('')
+  const [accountId, setAccountId] = useState('')
   const [supplier, setSupplier] = useState('')
   const [supplierEik, setSupplierEik] = useState('')
   const [documentType, setDocumentType] = useState('')
@@ -74,7 +70,7 @@ export function ExpenseForm({ propertyId, departments }: Props) {
   async function handleSave(isDraft: boolean) {
     setError(null)
 
-    if (!departmentId || !category || !supplier || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet <= 0) {
+    if (!departmentId || !accountId || !supplier || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet <= 0) {
       setError('Моля, попълнете всички задължителни полета.')
       return
     }
@@ -89,7 +85,7 @@ export function ExpenseForm({ propertyId, departments }: Props) {
     const body = {
       property_id: propertyId,
       department_id: departmentId,
-      category,
+      account_id: accountId,
       supplier,
       supplier_eik: supplierEik || null,
       document_type: documentType,
@@ -174,14 +170,16 @@ export function ExpenseForm({ propertyId, departments }: Props) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Категория *</Label>
-              <Select value={category} onValueChange={(v) => v && setCategory(v)}>
+              <Label>Сметка (USALI) *</Label>
+              <Select value={accountId} onValueChange={(v) => v && setAccountId(v)}>
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Избери категория" />
+                  <SelectValue placeholder="Избери сметка" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoryOptions.map(o => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  {accounts.filter(a => a.level === 3).map(a => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.code} {a.name}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>

@@ -5,25 +5,12 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import type { Expense, ExpenseCategory, ExpenseStatus } from '@/types/finance'
+import type { Expense, ExpenseStatus } from '@/types/finance'
 
 export type ExpenseWithJoins = Expense & {
   departments: { name: string }
   properties: { name: string }
-}
-
-const categoryLabels: Record<ExpenseCategory, string> = {
-  CONSUMABLES: 'Консумативи',
-  SALARIES: 'Заплати',
-  FOOD_KITCHEN: 'Кухня',
-  FUEL: 'Гориво',
-  TAXES_FEES: 'Данъци/Такси',
-  MAINTENANCE: 'Поддръжка',
-  UTILITIES: 'Комунални',
-  MARKETING: 'Маркетинг',
-  INSURANCE: 'Застраховки',
-  ACCOUNTING: 'Счетоводство',
-  OTHER: 'Друго',
+  usali_accounts: { code: string; name: string } | null
 }
 
 const statusLabels: Record<ExpenseStatus, string> = {
@@ -96,7 +83,7 @@ export function ExpenseList({ expenses }: Props) {
               {expense.supplier}
             </TableCell>
             <TableCell className="text-muted-foreground">
-              {categoryLabels[expense.category]}
+              {expense.usali_accounts ? `${expense.usali_accounts.code} ${expense.usali_accounts.name}` : '—'}
             </TableCell>
             <TableCell className="text-right font-mono">
               {expense.total_amount.toFixed(2)}

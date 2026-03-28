@@ -5,10 +5,11 @@ import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import type { IncomeEntry, IncomeEntryType, IncomeCategory, IncomeEntryStatus } from '@/types/finance'
+import type { IncomeEntry, IncomeEntryType, IncomeEntryStatus } from '@/types/finance'
 
 export type IncomeEntryWithJoins = IncomeEntry & {
   properties: { name: string }
+  usali_accounts: { code: string; name: string } | null
 }
 
 const typeLabels: Record<IncomeEntryType, string> = {
@@ -19,15 +20,6 @@ const typeLabels: Record<IncomeEntryType, string> = {
   INC_OTHER: 'Друг приход',
   CF_CREDIT: 'Усвояване на кредит',
   CF_TRANSFER: 'Вътрешен трансфер',
-}
-
-const categoryLabels: Record<IncomeCategory, string> = {
-  ACCOMMODATION: 'Нощувки',
-  FB: 'Храна и напитки',
-  SPA: 'СПА',
-  FEES: 'Такси',
-  COMMISSIONS: 'Комисиони',
-  OTHER: 'Друго',
 }
 
 const statusLabels: Record<IncomeEntryStatus, string> = {
@@ -87,7 +79,7 @@ export function IncomeList({ entries }: Props) {
               {typeLabels[entry.type]}
             </TableCell>
             <TableCell className="text-muted-foreground">
-              {entry.income_category ? categoryLabels[entry.income_category] : '—'}
+              {entry.usali_accounts ? `${entry.usali_accounts.code} ${entry.usali_accounts.name}` : '—'}
             </TableCell>
             <TableCell className="text-right font-mono">
               {entry.amount.toFixed(2)} лв.

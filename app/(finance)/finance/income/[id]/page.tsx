@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import type {
-  IncomeEntryType, IncomeCategory, IncomePaymentMethod, IncomeEntryStatus,
+  IncomeEntryType, IncomePaymentMethod, IncomeEntryStatus,
 } from '@/types/finance'
 
 interface Props {
@@ -21,15 +21,6 @@ const typeLabels: Record<IncomeEntryType, string> = {
   INC_OTHER: 'Друг приход',
   CF_CREDIT: 'Усвояване на кредит',
   CF_TRANSFER: 'Вътрешен трансфер',
-}
-
-const categoryLabels: Record<IncomeCategory, string> = {
-  ACCOMMODATION: 'Нощувки',
-  FB: 'Храна и напитки',
-  SPA: 'СПА',
-  FEES: 'Такси',
-  COMMISSIONS: 'Комисиони',
-  OTHER: 'Друго',
 }
 
 const paymentMethodLabels: Record<IncomePaymentMethod, string> = {
@@ -60,7 +51,7 @@ export default async function IncomeDetailPage({ params }: Props) {
 
   const { data: entry } = await supabase
     .from('income_entries')
-    .select('*, properties(name), bank_accounts(name, iban), loans(name)')
+    .select('*, properties(name), bank_accounts(name, iban), loans(name), usali_accounts(code, name)')
     .eq('id', id)
     .single()
 
@@ -100,10 +91,10 @@ export default async function IncomeDetailPage({ params }: Props) {
             <span className="text-muted-foreground">Тип: </span>
             {typeLabels[type]}
           </div>
-          {entry.income_category && (
+          {entry.usali_accounts && (
             <div>
-              <span className="text-muted-foreground">Категория: </span>
-              {categoryLabels[entry.income_category as IncomeCategory]}
+              <span className="text-muted-foreground">Сметка: </span>
+              {`${entry.usali_accounts.code} ${entry.usali_accounts.name}`}
             </div>
           )}
         </CardContent>

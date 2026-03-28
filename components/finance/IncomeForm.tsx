@@ -10,7 +10,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import type { IncomeEntryType, IncomeCategory, IncomePaymentMethod } from '@/types/finance'
+import type { IncomeEntryType, IncomePaymentMethod } from '@/types/finance'
+
+interface UsaliAccount {
+  id: string
+  code: string
+  name: string
+  level: number
+  account_type: string
+  parent_id: string | null
+}
 
 const typeOptions: { value: IncomeEntryType; label: string }[] = [
   { value: 'INC_BANK', label: 'Банков приход' },
@@ -22,26 +31,18 @@ const typeOptions: { value: IncomeEntryType; label: string }[] = [
   { value: 'CF_TRANSFER', label: 'Вътрешен трансфер' },
 ]
 
-const categoryOptions: { value: IncomeCategory; label: string }[] = [
-  { value: 'ACCOMMODATION', label: 'Нощувки' },
-  { value: 'FB', label: 'Храна и напитки' },
-  { value: 'SPA', label: 'СПА' },
-  { value: 'FEES', label: 'Такси' },
-  { value: 'COMMISSIONS', label: 'Комисиони' },
-  { value: 'OTHER', label: 'Друго' },
-]
-
 interface Props {
   properties: { id: string; name: string }[]
   bankAccounts: { id: string; name: string; iban: string }[]
   loans: { id: string; name: string }[]
+  accounts: UsaliAccount[]
 }
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function IncomeForm({ properties, bankAccounts, loans }: Props) {
+export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
 
@@ -51,7 +52,7 @@ export function IncomeForm({ properties, bankAccounts, loans }: Props) {
   const [amount, setAmount] = useState(0)
   const [paymentMethod, setPaymentMethod] = useState('')
   const [payer, setPayer] = useState('')
-  const [incomeCategory, setIncomeCategory] = useState('')
+  const [accountId, setAccountId] = useState('')
   const [bankAccountId, setBankAccountId] = useState('')
   const [loanId, setLoanId] = useState('')
   const [periodFrom, setPeriodFrom] = useState('')
@@ -83,7 +84,7 @@ export function IncomeForm({ properties, bankAccounts, loans }: Props) {
       amount,
       payment_method: paymentMethod,
       payer: payer.trim(),
-      income_category: showCategory && incomeCategory ? incomeCategory : null,
+      account_id: showCategory && accountId ? accountId : null,
       bank_account_id: showBankAccount && bankAccountId ? bankAccountId : null,
       loan_id: showLoan && loanId ? loanId : null,
       period_from: periodFrom || null,
@@ -211,14 +212,16 @@ export function IncomeForm({ properties, bankAccounts, loans }: Props) {
 
             {showCategory && (
               <div className="space-y-2">
-                <Label>Категория</Label>
-                <Select value={incomeCategory} onValueChange={(v) => v && setIncomeCategory(v)}>
+                <Label>Сметка (USALI)</Label>
+                <Select value={accountId} onValueChange={(v) => v && setAccountId(v)}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Избери категория" />
+                    <SelectValue placeholder="Избери сметка" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categoryOptions.map(o => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    {accounts.filter(a => a.level === 3).map(a => (
+                      <SelectItem key={a.id} value={a.id}>
+                        {a.code} {a.name}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

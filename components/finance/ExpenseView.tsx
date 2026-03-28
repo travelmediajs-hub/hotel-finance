@@ -3,7 +3,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import type { ExpenseCategory, ExpenseStatus, DocumentType, PaymentMethod } from '@/types/finance'
+import type { ExpenseStatus, DocumentType, PaymentMethod } from '@/types/finance'
 
 const statusLabels: Record<ExpenseStatus, string> = {
   DRAFT: 'Чернова',
@@ -25,20 +25,6 @@ const statusVariants: Record<ExpenseStatus, 'default' | 'secondary' | 'destructi
   PAID: 'outline',
   OVERDUE: 'destructive',
   REJECTED: 'destructive',
-}
-
-const categoryLabels: Record<ExpenseCategory, string> = {
-  CONSUMABLES: 'Консумативи',
-  SALARIES: 'Заплати',
-  FOOD_KITCHEN: 'Кухня',
-  FUEL: 'Гориво',
-  TAXES_FEES: 'Данъци/Такси',
-  MAINTENANCE: 'Поддръжка',
-  UTILITIES: 'Комунални',
-  MARKETING: 'Маркетинг',
-  INSURANCE: 'Застраховки',
-  ACCOUNTING: 'Счетоводство',
-  OTHER: 'Друго',
 }
 
 const documentTypeLabels: Record<DocumentType, string> = {
@@ -89,8 +75,8 @@ export function ExpenseView({ expense }: Props) {
             {departmentName}
           </div>
           <div>
-            <span className="text-muted-foreground">Категория: </span>
-            {categoryLabels[expense.category as ExpenseCategory]}
+            <span className="text-muted-foreground">Сметка: </span>
+            {expense.usali_accounts ? `${expense.usali_accounts.code} ${expense.usali_accounts.name}` : '—'}
           </div>
           {expense.supplier_eik && (
             <div>
