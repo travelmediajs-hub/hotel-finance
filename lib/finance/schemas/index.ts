@@ -1,5 +1,5 @@
 export * from './property'
-export * from './daily-report'
+export { createDailyReportSchema, updateLineSchema, submitDailyReportSchema, approveDailyReportSchema, returnDailyReportSchema, dailyReportLineSchema } from './daily-report'
 export * from './consolidation'
 export * from './expense'
 export * from './cash-flow'
