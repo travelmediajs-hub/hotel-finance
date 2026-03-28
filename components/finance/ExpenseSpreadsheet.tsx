@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
+import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
 import type { Expense, DocumentType, PaymentMethod, ExpenseStatus } from '@/types/finance'
 
 export type ExpenseWithJoins = Expense & {
@@ -119,6 +120,7 @@ export function ExpenseSpreadsheet({
   const [errors, setErrors] = useState<NewRowErrors>({})
   const [saveError, setSaveError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const { isHidden } = useHiddenAccounts(newRow.property_id || defaultPropertyId)
 
   // Filtered departments based on selected property in new row
   const availableDepts = departments.filter(
@@ -368,7 +370,7 @@ export function ExpenseSpreadsheet({
                   >
                     <option value="">Сметка...</option>
                     {accounts
-                      .filter(a => a.account_type === 'EXPENSE' && a.level === 3)
+                      .filter(a => a.account_type === 'EXPENSE' && a.level === 3 && !isHidden(a.id))
                       .map(a => (
                         <option key={a.id} value={a.id}>
                           {a.code} {a.name}

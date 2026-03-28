@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
+import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
 import type {
   IncomeEntry,
   IncomeEntryType,
@@ -91,6 +92,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({})
+  const { isHidden } = useHiddenAccounts(propertyId || undefined)
 
   const showCategory = type.startsWith('INC_')
   const total = entries.reduce((sum, e) => sum + e.amount, 0)
@@ -291,7 +293,7 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
                     >
                       <option value="">Сметка...</option>
                       {accounts
-                        .filter(a => a.account_type === 'REVENUE' && a.level === 3)
+                        .filter(a => a.account_type === 'REVENUE' && a.level === 3 && !isHidden(a.id))
                         .map(a => (
                           <option key={a.id} value={a.id}>
                             {a.code} {a.name}

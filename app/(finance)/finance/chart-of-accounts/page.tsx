@@ -12,7 +12,7 @@ export default async function ChartOfAccountsPage() {
 
   const supabase = await createClient()
 
-  const [{ data: accounts }, { data: templates }] = await Promise.all([
+  const [{ data: accounts }, { data: templates }, { data: properties }] = await Promise.all([
     supabase
       .from('usali_accounts')
       .select('*, usali_department_templates(code, name, category)')
@@ -21,6 +21,11 @@ export default async function ChartOfAccountsPage() {
       .from('usali_department_templates')
       .select('*')
       .order('sort_order'),
+    supabase
+      .from('properties')
+      .select('id, name')
+      .eq('status', 'ACTIVE')
+      .order('name'),
   ])
 
   return (
@@ -33,6 +38,7 @@ export default async function ChartOfAccountsPage() {
           <ChartOfAccountsTree
             accounts={accounts ?? []}
             templates={templates ?? []}
+            properties={properties ?? []}
           />
         </CardContent>
       </Card>

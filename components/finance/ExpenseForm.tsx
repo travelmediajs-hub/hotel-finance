@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import type { DocumentType, PaymentMethod } from '@/types/finance'
+import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
 
 interface UsaliAccount {
   id: string
@@ -48,6 +49,7 @@ function toDateString(d: Date): string {
 export function ExpenseForm({ propertyId, departments, accounts }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
+  const { isHidden } = useHiddenAccounts(propertyId)
 
   const [departmentId, setDepartmentId] = useState('')
   const [accountId, setAccountId] = useState('')
@@ -176,7 +178,7 @@ export function ExpenseForm({ propertyId, departments, accounts }: Props) {
                   <SelectValue placeholder="Избери сметка" />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts.filter(a => a.level === 3).map(a => (
+                  {accounts.filter(a => a.level === 3 && !isHidden(a.id)).map(a => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.code} {a.name}
                     </SelectItem>

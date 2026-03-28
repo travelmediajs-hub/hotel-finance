@@ -11,6 +11,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import type { IncomeEntryType, IncomePaymentMethod } from '@/types/finance'
+import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
 
 interface UsaliAccount {
   id: string
@@ -53,6 +54,7 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
   const [paymentMethod, setPaymentMethod] = useState('')
   const [payer, setPayer] = useState('')
   const [accountId, setAccountId] = useState('')
+  const { isHidden } = useHiddenAccounts(propertyId || undefined)
   const [bankAccountId, setBankAccountId] = useState('')
   const [loanId, setLoanId] = useState('')
   const [periodFrom, setPeriodFrom] = useState('')
@@ -218,7 +220,7 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
                     <SelectValue placeholder="Избери сметка" />
                   </SelectTrigger>
                   <SelectContent>
-                    {accounts.filter(a => a.level === 3).map(a => (
+                    {accounts.filter(a => a.level === 3 && !isHidden(a.id)).map(a => (
                       <SelectItem key={a.id} value={a.id}>
                         {a.code} {a.name}
                       </SelectItem>
