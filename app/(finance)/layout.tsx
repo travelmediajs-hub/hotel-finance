@@ -15,6 +15,8 @@ export default async function FinanceLayout({
       <FinanceSidebar
         userFullName={user.fullName}
         userRole={user.role}
+        realRole={user.realRole}
+        isSimulating={user.isSimulating}
       />
       <main className="flex-1 overflow-auto">
         {children}

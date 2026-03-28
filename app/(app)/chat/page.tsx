@@ -17,9 +17,7 @@ export default async function ChatPage() {
     .limit(1)
     .single()
 
-  if (latest) {
-    redirect(`/chat/${latest.id}`)
-  }
+  if (latest) redirect(`/chat/${latest.id}`)
 
   // No conversations yet — create one
   const { data: newConv } = await supabase
@@ -28,9 +26,5 @@ export default async function ChatPage() {
     .select('id')
     .single()
 
-  if (newConv) {
-    redirect(`/chat/${newConv.id}`)
-  }
-
-  redirect('/login')
+  redirect(newConv ? `/chat/${newConv.id}` : '/login')
 }

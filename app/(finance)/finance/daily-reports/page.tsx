@@ -30,7 +30,7 @@ export default async function DailyReportsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-lg">Дневни отчети</CardTitle>
-          {user.role === 'DEPT_HEAD' && (
+          {(user.role === 'DEPT_HEAD' || user.role === 'ADMIN_CO') && (
             <Link
               href="/finance/daily-reports/new"
               className="inline-flex items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/80 h-7 px-2.5 text-[0.8rem] font-medium"

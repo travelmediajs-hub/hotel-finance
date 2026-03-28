@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  if (user.role !== 'MANAGER') {
+  if (user.role !== 'MANAGER' && user.role !== 'ADMIN_CO') {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase
     .from('bank_accounts')
-    .insert({ ...parsed.data, created_by_id: user.id })
+    .insert(parsed.data)
     .select()
     .single()
 

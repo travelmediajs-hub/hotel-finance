@@ -49,11 +49,12 @@ export function DailyReportActions({ reportId, status, userRole, isOwner }: Prop
   }
 
   // Determine which actions are available
-  const canSubmit = isOwner && userRole === 'DEPT_HEAD' && (status === 'DRAFT' || status === 'RETURNED')
-  const canConfirm = userRole === 'MANAGER' && status === 'SUBMITTED'
-  const canReturnAsManager = userRole === 'MANAGER' && status === 'SUBMITTED'
-  const canApprove = (userRole === 'ADMIN_CO' || userRole === 'FINANCE_CO') && status === 'SENT_TO_CO'
-  const canReturnAsCO = (userRole === 'ADMIN_CO' || userRole === 'FINANCE_CO') && status === 'SENT_TO_CO'
+  const isAdmin = userRole === 'ADMIN_CO'
+  const canSubmit = (isOwner || isAdmin) && (status === 'DRAFT' || status === 'RETURNED')
+  const canConfirm = (userRole === 'MANAGER' || isAdmin) && status === 'SUBMITTED'
+  const canReturnAsManager = (userRole === 'MANAGER' || isAdmin) && status === 'SUBMITTED'
+  const canApprove = (isAdmin || userRole === 'FINANCE_CO') && status === 'SENT_TO_CO'
+  const canReturnAsCO = (isAdmin || userRole === 'FINANCE_CO') && status === 'SENT_TO_CO'
 
   const hasActions = canSubmit || canConfirm || canReturnAsManager || canApprove || canReturnAsCO
 

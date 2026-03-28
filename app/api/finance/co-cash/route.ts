@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
   const { data, error } = await supabase
     .from('co_cash')
-    .insert({ ...parsed.data, created_by_id: user.id })
+    .insert(parsed.data)
     .select()
     .single()
 

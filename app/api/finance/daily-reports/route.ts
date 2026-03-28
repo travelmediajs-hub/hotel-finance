@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const user = await getFinanceUser()
-  if (!user || user.role !== 'DEPT_HEAD') {
+  if (!user) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 

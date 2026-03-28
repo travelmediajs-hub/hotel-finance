@@ -13,10 +13,6 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  if (user.role !== 'DEPT_HEAD') {
-    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
-  }
-
   const supabase = await createClient()
 
   // Fetch the report
@@ -30,8 +26,8 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  // Only the creator can submit
-  if (report.created_by_id !== user.id) {
+  // Creator or ADMIN_CO can submit
+  if (report.created_by_id !== user.id && user.role !== 'ADMIN_CO') {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 

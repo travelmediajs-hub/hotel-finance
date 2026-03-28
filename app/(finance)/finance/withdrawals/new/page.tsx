@@ -18,7 +18,7 @@ export default async function NewWithdrawalPage({ searchParams }: Props) {
 
   let propertyId = ''
 
-  if (user.role === 'ADMIN_CO') {
+  if (user.role === 'ADMIN_CO' || user.isSimulating) {
     if (!params.property_id) {
       // Show property picker
       const { data: properties } = await supabase
