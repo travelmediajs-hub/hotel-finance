@@ -11,9 +11,7 @@ export type PropertyType = 'HOTEL' | 'APARTMENT_HOTEL' | 'HOSTEL' | 'SHOP' | 'OT
 export type PropertyCategory = '1_STAR' | '2_STAR' | '3_STAR' | '4_STAR' | '5_STAR' | 'NONE'
 export type ActiveStatus = 'ACTIVE' | 'INACTIVE'
 
-export type DailyReportStatus =
-  | 'DRAFT' | 'SUBMITTED' | 'CONFIRMED' | 'RETURNED'
-  | 'SENT_TO_CO' | 'APPROVED' | 'CORRECTED'
+export type DailyReportStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED'
 
 export type ConsolidationStatus =
   | 'IN_PROGRESS' | 'SENT_TO_CO' | 'APPROVED' | 'RETURNED' | 'CORRECTED'
@@ -163,14 +161,11 @@ export interface Department {
 
 export interface DailyReport {
   id: string
-  department_id: string
   property_id: string
   date: string
   created_by_id: string
   status: DailyReportStatus
   submitted_at: string | null
-  confirmed_by_id: string | null
-  confirmed_at: string | null
   approved_by_id: string | null
   approved_at: string | null
   co_comment: string | null
@@ -181,6 +176,7 @@ export interface DailyReport {
   pos_diff: number
   total_diff: number
   diff_explanation: string | null
+  general_attachment_url: string | null
   consolidation_id: string | null
   created_at: string
   updated_at: string
@@ -191,28 +187,19 @@ export interface DailyReportLine {
   daily_report_id: string
   department_id: string
   cash_income: number
-  cash_return: number
+  cash_refund: number
   cash_net: number // generated
-}
-
-export interface POSEntry {
-  id: string
-  daily_report_id: string
-  pos_terminal_id: string
-  amount: number
-  return_amount: number
-  net_amount: number // generated
-}
-
-export interface ZReport {
-  id: string
-  daily_report_id: string
-  cash_amount: number
-  pos_amount: number
-  total_amount: number // generated
-  attachment_url: string
-  additional_files: string[]
-  created_at: string
+  pos_income: number
+  pos_refund: number
+  pos_net: number // generated
+  z_cash: number
+  z_pos: number
+  z_attachment_url: string | null
+  pos_report_amount: number
+  cash_diff: number // generated
+  pos_diff: number // generated
+  total_diff: number // generated
+  filled_by_id: string | null
 }
 
 export interface PropertyConsolidation {
