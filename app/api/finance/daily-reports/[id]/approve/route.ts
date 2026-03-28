@@ -9,9 +9,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const { id } = await params
   const user = await getFinanceUser()
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
-  }
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
   if (!isCORole(user.role)) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
@@ -19,31 +17,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const supabase = await createClient()
 
-  // Fetch the report
-  const { data: report, error: fetchError } = await supabase
+  const { data: report } = await supabase
     .from('daily_reports')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (fetchError || !report) {
-    return NextResponse.json({ error: 'not_found' }, { status: 404 })
-  }
+  if (!report) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
-  if (report.status !== 'SENT_TO_CO') {
+  if (report.status !== 'SUBMITTED') {
     return NextResponse.json(
-      { error: 'invalid_status', message: 'Рапортът трябва да е в статус ИЗПРАТЕН КЪМ ЦО' },
+      { error: 'invalid_status', message: 'Отчетът трябва да е в статус ИЗПРАТЕН' },
       { status: 400 }
     )
   }
 
-  // Optional co_comment from body
   let coComment: string | undefined
   try {
     const body = await request.json()
     coComment = body.co_comment
   } catch {
-    // No body or invalid JSON — that's fine, comment is optional
+    // optional
   }
 
   const updateData: Record<string, unknown> = {
@@ -51,9 +45,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     approved_by_id: user.id,
     approved_at: new Date().toISOString(),
   }
-  if (coComment !== undefined) {
-    updateData.co_comment = coComment
-  }
+  if (coComment) updateData.co_comment = coComment
 
   const { data, error } = await supabase
     .from('daily_reports')
@@ -62,9 +54,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     .select()
     .single()
 
-  if (error) {
-    return NextResponse.json({ error: 'database_error' }, { status: 500 })
-  }
+  if (error) return NextResponse.json({ error: 'database_error' }, { status: 500 })
 
   return NextResponse.json(data)
 }

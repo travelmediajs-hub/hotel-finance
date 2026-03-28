@@ -9,11 +9,12 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const { id } = await params
   const user = await getFinanceUser()
-  if (!user) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+  if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
+
+  if (!isCORole(user.role)) {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
-  // Parse body — comment is mandatory
   let body: { comment?: string }
   try {
     body = await request.json()
@@ -33,61 +34,32 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const supabase = await createClient()
 
-  // Fetch the report
-  const { data: report, error: fetchError } = await supabase
+  const { data: report } = await supabase
     .from('daily_reports')
     .select('*')
     .eq('id', id)
     .single()
 
-  if (fetchError || !report) {
-    return NextResponse.json({ error: 'not_found' }, { status: 404 })
+  if (!report) return NextResponse.json({ error: 'not_found' }, { status: 404 })
+
+  if (report.status !== 'SUBMITTED') {
+    return NextResponse.json(
+      { error: 'invalid_status', message: 'Отчетът трябва да е в статус ИЗПРАТЕН' },
+      { status: 400 }
+    )
   }
 
-  const isManager = user.role === 'MANAGER'
-  const isCO = isCORole(user.role)
+  const { data, error } = await supabase
+    .from('daily_reports')
+    .update({
+      status: 'RETURNED',
+      co_comment: body.comment.trim(),
+    })
+    .eq('id', id)
+    .select()
+    .single()
 
-  // MANAGER can return SUBMITTED reports
-  if (isManager && report.status === 'SUBMITTED') {
-    const { data, error } = await supabase
-      .from('daily_reports')
-      .update({
-        status: 'RETURNED',
-        manager_comment: body.comment.trim(),
-      })
-      .eq('id', id)
-      .select()
-      .single()
+  if (error) return NextResponse.json({ error: 'database_error' }, { status: 500 })
 
-    if (error) {
-      return NextResponse.json({ error: 'database_error' }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
-  }
-
-  // CO can return SENT_TO_CO reports
-  if (isCO && report.status === 'SENT_TO_CO') {
-    const { data, error } = await supabase
-      .from('daily_reports')
-      .update({
-        status: 'RETURNED',
-        co_comment: body.comment.trim(),
-      })
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) {
-      return NextResponse.json({ error: 'database_error' }, { status: 500 })
-    }
-
-    return NextResponse.json(data)
-  }
-
-  // If we get here, the user doesn't have permission for this action in this status
-  return NextResponse.json(
-    { error: 'forbidden', message: 'Нямате право да върнете рапорт в този статус' },
-    { status: 403 }
-  )
+  return NextResponse.json(data)
 }
