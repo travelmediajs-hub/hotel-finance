@@ -22,7 +22,8 @@ export default async function ExpensesPage() {
     expenseQuery = expenseQuery.eq('created_by_id', user.id)
   }
 
-  const { data: expenses } = await expenseQuery
+  const { data: expenses, error: expError } = await expenseQuery
+  if (expError) console.error('[expenses] query error:', expError.message)
 
   // --- Properties ---
   let properties: Array<{ id: string; name: string }> = []
@@ -49,7 +50,7 @@ export default async function ExpensesPage() {
     }
   }
 
-  const [{ data: accounts }, { data: suppliers }] = await Promise.all([
+  const [{ data: accounts }, { data: suppliers }, { data: bankAccounts }] = await Promise.all([
     supabase
       .from('usali_accounts')
       .select('id, code, name, level, account_type, parent_id')
@@ -61,7 +62,14 @@ export default async function ExpensesPage() {
       .select('id, name, eik')
       .eq('is_active', true)
       .order('name'),
+    supabase
+      .from('bank_accounts')
+      .select('id, name, iban, allowed_payments')
+      .eq('status', 'ACTIVE')
+      .order('name'),
   ])
+
+  const { data: coCashData } = await supabase.from('co_cash').select('id, name, allowed_payments').order('name')
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -72,10 +80,12 @@ export default async function ExpensesPage() {
         <CardContent className="p-0 pb-4">
           <div className="px-4">
             <ExpenseSpreadsheet
-              expenses={(expenses as ExpenseWithJoins[]) ?? []}
+              expenses={((expenses ?? []) as ExpenseWithJoins[])}
               properties={properties}
               accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
               suppliers={(suppliers ?? []) as Array<{ id: string; name: string; eik: string | null }>}
+              bankAccounts={(bankAccounts ?? []).map((ba: Record<string, unknown>) => ({ id: ba.id as string, name: ba.name as string, iban: ba.iban as string, allowed_payments: (ba.allowed_payments as string[] | undefined) ?? [] }))}
+              coCash={(coCashData ?? []).map((c: Record<string, unknown>) => ({ id: c.id as string, name: c.name as string, allowed_payments: (c.allowed_payments as string[] | undefined) ?? [] }))}
               userRole={user.role}
               defaultPropertyId={defaultPropertyId}
             />

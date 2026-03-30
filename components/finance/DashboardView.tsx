@@ -21,9 +21,15 @@ interface BankAccount {
   last_transaction_date: string | null
 }
 
-interface COCash {
+interface COCashRegister {
+  id: string
+  name: string
   current_balance: number
-  last_updated: string | null
+}
+
+interface COCash {
+  registers: COCashRegister[]
+  total_balance: number
 }
 
 interface Loan {
@@ -99,7 +105,7 @@ interface DashboardData {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatAmount(amount: number): string {
-  return amount.toLocaleString('bg-BG', { minimumFractionDigits: 2 }) + ' лв.'
+  return amount.toLocaleString('bg-BG', { minimumFractionDigits: 2 }) + ' €'
 }
 
 function getDaysColor(days: number): string {
@@ -170,7 +176,7 @@ export function DashboardView() {
 
   const {
     bank_accounts,
-    co_cash,
+    co_cash: rawCoCash,
     loans,
     revolving_credits,
     pending_expenses,
@@ -180,6 +186,11 @@ export function DashboardView() {
     upcoming_loan_payments,
     net_cash_position,
   } = data
+
+  // Backwards compat: handle old format (single balance) or new (registers array)
+  const co_cash: COCash = rawCoCash?.registers
+    ? rawCoCash
+    : { registers: [], total_balance: (rawCoCash as unknown as { current_balance?: number })?.current_balance ?? 0 }
 
   const netPositive = net_cash_position >= 0
 
@@ -238,20 +249,34 @@ export function DashboardView() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
-              <span>💰</span> Каса ЦО
+              <span>💰</span> Каси ЦО
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">Салдо</p>
-              <p className={`text-2xl font-bold font-mono ${co_cash.current_balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                {formatAmount(co_cash.current_balance)}
-              </p>
-            </div>
-            {co_cash.last_updated && (
-              <p className="text-xs text-muted-foreground">
-                Обн: {co_cash.last_updated}
-              </p>
+          <CardContent className="space-y-2">
+            {co_cash.registers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Няма каси</p>
+            ) : (
+              co_cash.registers.map(reg => (
+                <div key={reg.id} className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground truncate max-w-[140px]" title={reg.name}>
+                    {reg.name}
+                  </span>
+                  <span className={`font-mono font-medium ${reg.current_balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatAmount(reg.current_balance)}
+                  </span>
+                </div>
+              ))
+            )}
+            {co_cash.registers.length > 1 && (
+              <>
+                <Separator className="my-2" />
+                <div className="flex items-center justify-between text-sm font-semibold">
+                  <span className="text-muted-foreground">Общо</span>
+                  <span className={`font-mono ${co_cash.total_balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatAmount(co_cash.total_balance)}
+                  </span>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

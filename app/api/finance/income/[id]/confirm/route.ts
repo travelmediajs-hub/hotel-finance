@@ -21,7 +21,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 
   const { data: entry, error: fetchError } = await supabase
     .from('income_entries')
-    .select('id, status')
+    .select('id, status, bank_account_id, payment_method, amount, entry_date, payer, property_id, description')
     .eq('id', id)
     .single()
 
@@ -45,6 +45,21 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
 
   if (error) {
     return NextResponse.json({ error: 'database_error' }, { status: 500 })
+  }
+
+  // Auto-create bank transaction when income is confirmed and has a bank account
+  if (entry.bank_account_id && entry.payment_method === 'BANK') {
+    await supabase.from('bank_transactions').insert({
+      bank_account_id: entry.bank_account_id,
+      transaction_date: entry.entry_date,
+      direction: 'IN',
+      amount: entry.amount,
+      counterparty: entry.payer,
+      type: 'IN_HOTEL',
+      property_id: entry.property_id,
+      note: entry.description ?? null,
+      created_by_id: user.id,
+    })
   }
 
   return NextResponse.json(data)

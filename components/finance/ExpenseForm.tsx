@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select'
 import type { DocumentType, PaymentMethod } from '@/types/finance'
 import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
+import { Plus } from 'lucide-react'
 
 interface UsaliAccount {
   id: string
@@ -20,6 +21,13 @@ interface UsaliAccount {
   level: number
   account_type: string
   parent_id: string | null
+}
+
+interface SupplierOption {
+  id: string
+  name: string
+  eik: string | null
+  vat_number: string | null
 }
 
 const documentTypeOptions: { value: DocumentType; label: string }[] = [
@@ -39,20 +47,27 @@ const paymentMethodOptions: { value: PaymentMethod; label: string }[] = [
 interface Props {
   propertyId: string
   accounts: UsaliAccount[]
+  suppliers?: SupplierOption[]
 }
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function ExpenseForm({ propertyId, accounts }: Props) {
+export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
   const { isHidden } = useHiddenAccounts(propertyId)
 
   const [accountId, setAccountId] = useState('')
+  const [supplierId, setSupplierId] = useState('')
   const [supplier, setSupplier] = useState('')
   const [supplierEik, setSupplierEik] = useState('')
+  const [suppliersList, setSuppliersList] = useState<SupplierOption[]>(initialSuppliers ?? [])
+  const [supplierSearch, setSupplierSearch] = useState('')
+  const [supplierDropdown, setSupplierDropdown] = useState(false)
+  const [creatingSupplier, setCreatingSupplier] = useState(false)
+  const supplierRef = useRef<HTMLDivElement>(null)
   const [documentType, setDocumentType] = useState('')
   const [documentNumber, setDocumentNumber] = useState('')
   const [issueDate, setIssueDate] = useState(today)
@@ -67,10 +82,71 @@ export function ExpenseForm({ propertyId, accounts }: Props) {
 
   const totalAmount = amountNet + vatAmount
 
+  // Load suppliers if not passed as prop
+  useEffect(() => {
+    if (initialSuppliers) return
+    fetch('/api/finance/suppliers?active_only=true')
+      .then((r) => r.json())
+      .then((data) => { if (Array.isArray(data)) setSuppliersList(data) })
+      .catch(() => {})
+  }, [initialSuppliers])
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (supplierRef.current && !supplierRef.current.contains(e.target as Node)) {
+        setSupplierDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const filteredSuppliers = suppliersList.filter(
+    (s) =>
+      s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
+      s.eik?.includes(supplierSearch) ||
+      s.vat_number?.includes(supplierSearch)
+  )
+
+  function selectSupplier(s: SupplierOption) {
+    setSupplierId(s.id)
+    setSupplier(s.name)
+    setSupplierEik(s.eik ?? '')
+    setSupplierSearch(s.name)
+    setSupplierDropdown(false)
+  }
+
+  async function createSupplierInline() {
+    const name = supplierSearch.trim()
+    if (!name) return
+    setCreatingSupplier(true)
+    try {
+      const res = await fetch('/api/finance/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      })
+      if (res.ok) {
+        const created = await res.json()
+        const opt: SupplierOption = { id: created.id, name: created.name, eik: created.eik, vat_number: created.vat_number }
+        setSuppliersList((prev) => [...prev, opt].sort((a, b) => a.name.localeCompare(b.name)))
+        selectSupplier(opt)
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error ?? 'Грешка при създаване на доставчик')
+      }
+    } catch {
+      setError('Грешка при връзка')
+    } finally {
+      setCreatingSupplier(false)
+    }
+  }
+
   async function handleSave(isDraft: boolean) {
     setError(null)
 
-    if (!accountId || !supplier || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet <= 0) {
+    if (!accountId || !supplierId || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet <= 0) {
       setError('Моля, попълнете всички задължителни полета.')
       return
     }
@@ -85,6 +161,7 @@ export function ExpenseForm({ propertyId, accounts }: Props) {
     const body = {
       property_id: propertyId,
       account_id: accountId,
+      supplier_id: supplierId,
       supplier,
       supplier_eik: supplierEik || null,
       document_type: documentType,
@@ -170,14 +247,51 @@ export function ExpenseForm({ propertyId, accounts }: Props) {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="supplier">Доставчик *</Label>
+            <div className="space-y-2 relative" ref={supplierRef}>
+              <Label>Доставчик *</Label>
               <Input
-                id="supplier"
-                value={supplier}
-                onChange={(e) => setSupplier(e.target.value)}
-                placeholder="Име на доставчик"
+                value={supplierSearch}
+                onChange={(e) => {
+                  setSupplierSearch(e.target.value)
+                  setSupplierDropdown(true)
+                  if (!e.target.value.trim()) {
+                    setSupplierId('')
+                    setSupplier('')
+                    setSupplierEik('')
+                  }
+                }}
+                onFocus={() => setSupplierDropdown(true)}
+                placeholder="Търсене или добавяне..."
               />
+              {supplierDropdown && (
+                <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-52 overflow-y-auto">
+                  {filteredSuppliers.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 flex justify-between items-center"
+                      onClick={() => selectSupplier(s)}
+                    >
+                      <span>{s.name}</span>
+                      {s.eik && <span className="text-xs text-muted-foreground font-mono">{s.eik}</span>}
+                    </button>
+                  ))}
+                  {supplierSearch.trim() && !filteredSuppliers.some((s) => s.name.toLowerCase() === supplierSearch.trim().toLowerCase()) && (
+                    <button
+                      type="button"
+                      disabled={creatingSupplier}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-muted/50 text-primary flex items-center gap-1.5 border-t"
+                      onClick={createSupplierInline}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      {creatingSupplier ? 'Създаване...' : `Добави "${supplierSearch.trim()}"`}
+                    </button>
+                  )}
+                  {!supplierSearch.trim() && filteredSuppliers.length === 0 && (
+                    <p className="px-3 py-2 text-sm text-muted-foreground">Няма доставчици</p>
+                  )}
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="supplier_eik">ЕИК на доставчик</Label>
@@ -186,6 +300,7 @@ export function ExpenseForm({ propertyId, accounts }: Props) {
                 value={supplierEik}
                 onChange={(e) => setSupplierEik(e.target.value)}
                 placeholder="ЕИК"
+                disabled={!!supplierId}
               />
             </div>
           </div>

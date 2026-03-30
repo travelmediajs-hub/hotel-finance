@@ -51,7 +51,8 @@ export const createDepartmentSchema = z.object({
   manager_id: z.string().uuid(),
   authorized_person_id: z.string().uuid().nullable().optional(),
   fiscal_device_id: z.string().uuid().nullable().optional(),
-  pos_terminal_ids: z.array(z.string().uuid()).optional(),
+  pos_terminal_id: z.string().uuid().nullable().optional(),
+  sort_order: z.number().int().min(0).optional(),
 })
 
 export const updateDepartmentSchema = createDepartmentSchema.omit({ property_id: true }).partial()

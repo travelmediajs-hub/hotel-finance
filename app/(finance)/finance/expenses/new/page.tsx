@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default async function NewExpensePage({ searchParams }: Props) {
-  const user = await requireRole('MANAGER', 'ADMIN_CO')
+  const user = await requireRole('MANAGER', 'ADMIN_CO', 'FINANCE_CO')
   if (!user) redirect('/finance')
 
   const supabase = await createClient()
@@ -18,7 +18,7 @@ export default async function NewExpensePage({ searchParams }: Props) {
 
   let propertyId = ''
 
-  if (user.role === 'ADMIN_CO' || user.isSimulating) {
+  if (user.role === 'ADMIN_CO' || user.role === 'FINANCE_CO' || user.isSimulating) {
     if (!params.property_id) {
       // Show property picker
       const { data: properties } = await supabase
@@ -69,19 +69,27 @@ export default async function NewExpensePage({ searchParams }: Props) {
     propertyId = propertyIds[0]
   }
 
-  const { data: accounts } = await supabase
-    .from('usali_accounts')
-    .select('id, code, name, level, account_type, parent_id')
-    .eq('is_active', true)
-    .eq('account_type', 'EXPENSE')
-    .order('sort_order')
+  const [accountsResult, suppliersResult] = await Promise.all([
+    supabase
+      .from('usali_accounts')
+      .select('id, code, name, level, account_type, parent_id')
+      .eq('is_active', true)
+      .eq('account_type', 'EXPENSE')
+      .order('sort_order'),
+    supabase
+      .from('suppliers')
+      .select('id, name, eik, vat_number')
+      .eq('is_active', true)
+      .order('name'),
+  ])
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-lg font-semibold mb-6">Нов разход</h1>
       <ExpenseForm
         propertyId={propertyId}
-        accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
+        accounts={(accountsResult.data ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
+        suppliers={(suppliersResult.data ?? []) as Array<{ id: string; name: string; eik: string | null; vat_number: string | null }>}
       />
     </div>
   )

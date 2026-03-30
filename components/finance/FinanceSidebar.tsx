@@ -19,7 +19,7 @@ import {
 import {
   Building2, LayoutDashboard, FileText, FileCheck, Receipt, Wallet,
   Landmark, ArrowRightLeft, TrendingUp, MessageSquare,
-  CalendarDays, Eye, Package, BookOpen, BarChart3,
+  CalendarDays, Eye, Package, BookOpen, BarChart3, Users,
 } from 'lucide-react'
 import type { UserRole } from '@/types/finance'
 
@@ -33,14 +33,15 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: '/finance/dashboard', label: 'Табло', icon: LayoutDashboard, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/daily-reports', label: 'Дневни отчети', icon: FileText, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER', 'DEPT_HEAD'] },
-  { href: '/finance/consolidations', label: 'Консолидации', icon: FileCheck, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
+  // { href: '/finance/consolidations', label: 'Консолидации', icon: FileCheck, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
   { href: '/finance/expenses', label: 'Разходи', icon: Receipt, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
-  { href: '/finance/withdrawals', label: 'Тегления', icon: Wallet, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
-  { href: '/finance/cash-flow', label: 'Парични потоци', icon: ArrowRightLeft, roles: ['ADMIN_CO', 'FINANCE_CO'] },
+  // { href: '/finance/withdrawals', label: 'Тегления', icon: Wallet, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
+  // { href: '/finance/cash-flow', label: 'Парични потоци', icon: ArrowRightLeft, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/income', label: 'Приходи', icon: TrendingUp, roles: ['ADMIN_CO', 'FINANCE_CO'] },
-  { href: '/finance/in-transit', label: 'Обръщения', icon: Package, roles: ['ADMIN_CO', 'FINANCE_CO'] },
-  { href: '/finance/banking', label: 'Банки и кредити', icon: Landmark, roles: ['ADMIN_CO', 'FINANCE_CO'] },
+  { href: '/finance/in-transit', label: 'Парични трансфери', icon: Package, roles: ['ADMIN_CO', 'FINANCE_CO'] },
+  { href: '/finance/banking', label: 'Банки, кредити и каси', icon: Landmark, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/monthly', label: 'Месечен отчет', icon: CalendarDays, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
+  { href: '/finance/suppliers', label: 'Доставчици', icon: Users, roles: ['ADMIN_CO', 'FINANCE_CO', 'MANAGER'] },
   { href: '/finance/chart-of-accounts', label: 'Сметкоплан', icon: BookOpen, roles: ['ADMIN_CO'] },
   { href: '/finance/usali-reports', label: 'USALI Отчети', icon: BarChart3, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/properties', label: 'Обекти', icon: Building2, roles: ['ADMIN_CO'] },
@@ -50,7 +51,7 @@ const roleLabels: Record<UserRole, string> = {
   ADMIN_CO: 'Администратор',
   FINANCE_CO: 'Финанси ЦО',
   MANAGER: 'Управител',
-  DEPT_HEAD: 'Началник отдел',
+  DEPT_HEAD: 'Отговорник точка',
 }
 
 interface Props {

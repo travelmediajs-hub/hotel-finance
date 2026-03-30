@@ -154,7 +154,7 @@ export function MoneyReceivedForm({ properties, bankAccounts }: Props) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Сума (лв.) *</Label>
+              <Label htmlFor="amount">Сума (€) *</Label>
               <Input
                 id="amount"
                 type="number"

@@ -26,7 +26,7 @@ export default async function PropertyDetailPage({ params }: Props) {
     { data: terminals },
   ] = await Promise.all([
     supabase.from('properties').select('*').eq('id', id).single(),
-    supabase.from('departments').select('*').eq('property_id', id).order('name'),
+    supabase.from('departments').select('*').eq('property_id', id).order('sort_order').order('name'),
     supabase.from('fiscal_devices').select('*').eq('property_id', id).order('serial_number'),
     supabase.from('pos_terminals').select('*').eq('property_id', id).order('tid'),
   ])
@@ -41,7 +41,7 @@ export default async function PropertyDetailPage({ params }: Props) {
         <TabsList>
           <TabsTrigger value="info">Информация</TabsTrigger>
           <TabsTrigger value="departments">
-            Отдели ({departments?.length ?? 0})
+            Точки на продажба ({departments?.length ?? 0})
           </TabsTrigger>
           <TabsTrigger value="devices">
             Фискални у-ва ({devices?.length ?? 0})
@@ -59,6 +59,8 @@ export default async function PropertyDetailPage({ params }: Props) {
           <DepartmentList
             propertyId={id}
             departments={(departments as Department[]) ?? []}
+            fiscalDevices={(devices as FiscalDevice[]) ?? []}
+            posTerminals={(terminals as POSTerminal[]) ?? []}
           />
         </TabsContent>
 

@@ -57,16 +57,28 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { sources, ...inTransitData } = parsed.data
+  const { sources, carried_by_id, destination, ...inTransitData } = parsed.data
   const supabase = await createClient()
+
+  // If destination is provided, create as CLOSED immediately
+  const isClosed = !!destination
+  const now = new Date().toISOString()
+
+  const insertData: Record<string, unknown> = {
+    ...inTransitData,
+    carried_by_id,
+    remaining_amount: isClosed ? 0 : inTransitData.total_amount,
+    status: isClosed ? 'CLOSED' : 'OPEN',
+  }
+  if (isClosed) insertData.closed_at = now
+  if (destination) {
+    insertData.destination_type = destination.destination_type
+    insertData.destination_id = destination.destination_id
+  }
 
   const { data: inTransit, error: insertError } = await supabase
     .from('in_transits')
-    .insert({
-      ...inTransitData,
-      carried_by_id: user.id,
-      remaining_amount: inTransitData.total_amount,
-    })
+    .insert(insertData)
     .select()
     .single()
 
@@ -85,6 +97,44 @@ export async function POST(request: NextRequest) {
 
   if (sourcesError) {
     return NextResponse.json({ error: 'database_error' }, { status: 500 })
+  }
+
+  // Create bank transactions for bank account sources/destinations
+  if (isClosed) {
+    const today = new Date().toISOString().slice(0, 10)
+    const desc = inTransitData.description
+
+    // Source is bank account → OUT transaction
+    for (const src of sources) {
+      if (src.source_type === 'BANK_ACCOUNT') {
+        const { error: txErr } = await supabase.from('bank_transactions').insert({
+          bank_account_id: src.source_id,
+          transaction_date: today,
+          direction: 'OUT',
+          amount: src.amount,
+          counterparty: 'Паричен трансфер',
+          description: desc,
+          type: 'OUT_TRANSFER',
+          created_by_id: user.id,
+        })
+        if (txErr) console.error('bank_tx OUT error:', txErr)
+      }
+    }
+
+    // Destination is bank account → IN transaction
+    if (destination!.destination_type === 'BANK_ACCOUNT') {
+      const { error: txErr } = await supabase.from('bank_transactions').insert({
+        bank_account_id: destination!.destination_id,
+        transaction_date: today,
+        direction: 'IN',
+        amount: inTransitData.total_amount,
+        counterparty: 'Паричен трансфер',
+        description: desc,
+        type: 'IN_OTHER',
+        created_by_id: user.id,
+      })
+      if (txErr) console.error('bank_tx IN error:', txErr)
+    }
   }
 
   return NextResponse.json(inTransit, { status: 201 })

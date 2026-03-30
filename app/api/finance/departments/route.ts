@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     .from('departments')
     .select('*')
     .eq('property_id', propertyId)
+    .order('sort_order')
     .order('name')
 
   if (error) {
@@ -43,25 +44,23 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { pos_terminal_ids, ...departmentData } = parsed.data
-
   const supabase = await createClient()
+
+  const { authorized_person_id, fiscal_device_id, pos_terminal_id, sort_order, ...requiredFields } = parsed.data
+  const insertData: Record<string, unknown> = { ...requiredFields }
+  if (authorized_person_id) insertData.authorized_person_id = authorized_person_id
+  if (fiscal_device_id) insertData.fiscal_device_id = fiscal_device_id
+  if (pos_terminal_id) insertData.pos_terminal_id = pos_terminal_id
+  if (sort_order !== undefined) insertData.sort_order = sort_order
+
   const { data, error } = await supabase
     .from('departments')
-    .insert(departmentData)
+    .insert(insertData)
     .select()
     .single()
 
   if (error) {
-    return NextResponse.json({ error: 'database_error' }, { status: 500 })
-  }
-
-  if (pos_terminal_ids && pos_terminal_ids.length > 0) {
-    const junctionRows = pos_terminal_ids.map(tid => ({
-      department_id: data.id,
-      pos_terminal_id: tid,
-    }))
-    await supabase.from('department_pos_terminals').insert(junctionRows)
+    return NextResponse.json({ error: 'database_error', message: error.message }, { status: 500 })
   }
 
   return NextResponse.json(data, { status: 201 })

@@ -49,17 +49,42 @@ export default async function DailyReportsPage({ searchParams }: Props) {
 
   const { data: departments } = await supabase
     .from('departments')
-    .select('id, name, fiscal_device_id')
+    .select('id, name, fiscal_device_id, sort_order')
     .eq('property_id', selectedPropertyId)
     .eq('status', 'ACTIVE')
+    .order('sort_order')
     .order('name')
 
-  const { data: reports } = await supabase
+  const reportsQuery = () => supabase
     .from('daily_reports')
     .select('*, daily_report_lines(*, departments(id, name))')
     .eq('property_id', selectedPropertyId)
     .order('date', { ascending: false })
     .limit(60)
+
+  let { data: reports } = await reportsQuery()
+
+  // Auto-sync: add missing department lines to DRAFT reports
+  const activeDeptIds = new Set((departments ?? []).map((d) => d.id))
+  if (reports && reports.length > 0 && activeDeptIds.size > 0) {
+    const linesToInsert: Array<{ daily_report_id: string; department_id: string }> = []
+    for (const report of reports) {
+      if (report.status !== 'DRAFT') continue
+      const existingDeptIds = new Set(
+        (report.daily_report_lines ?? []).map((l: { department_id: string }) => l.department_id)
+      )
+      for (const deptId of activeDeptIds) {
+        if (!existingDeptIds.has(deptId)) {
+          linesToInsert.push({ daily_report_id: report.id, department_id: deptId })
+        }
+      }
+    }
+    if (linesToInsert.length > 0) {
+      await supabase.from('daily_report_lines').insert(linesToInsert)
+      const { data: refreshed } = await reportsQuery()
+      if (refreshed) reports = refreshed
+    }
+  }
 
   // For DEPT_HEAD, fetch which departments they can edit
   let userDepartmentIds: string[] | undefined

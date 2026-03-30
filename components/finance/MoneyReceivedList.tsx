@@ -78,7 +78,7 @@ export function MoneyReceivedList({ records }: Props) {
               {rec.properties.name}
             </TableCell>
             <TableCell className="text-right font-mono">
-              {rec.amount.toFixed(2)} лв.
+              {rec.amount.toFixed(2)} €
             </TableCell>
             <TableCell className="text-muted-foreground">
               {purposeLabels[rec.purpose]}

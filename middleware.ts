@@ -2,6 +2,17 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const isProtected = request.nextUrl.pathname.startsWith('/chat') ||
+                      request.nextUrl.pathname.startsWith('/finance')
+  const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
+                     request.nextUrl.pathname.startsWith('/register')
+
+  // Skip Supabase call entirely if no auth cookie present on public pages
+  const hasAuthCookie = request.cookies.getAll().some(c => c.name.startsWith('sb-'))
+  if (isAuthPage && !hasAuthCookie) {
+    return NextResponse.next({ request })
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -26,11 +37,6 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
-
-  const isProtected = request.nextUrl.pathname.startsWith('/chat') ||
-                      request.nextUrl.pathname.startsWith('/finance')
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
-                     request.nextUrl.pathname.startsWith('/register')
 
   if (!user && isProtected) {
     return NextResponse.redirect(new URL('/login', request.url))

@@ -95,7 +95,7 @@ export default async function MoneyReceivedDetailPage({ params }: Props) {
             </div>
             <div>
               <p className="text-muted-foreground">Сума</p>
-              <p className="font-mono font-medium">{rec.amount.toFixed(2)} лв.</p>
+              <p className="font-mono font-medium">{rec.amount.toFixed(2)} €</p>
             </div>
             <div>
               <p className="text-muted-foreground">Цел</p>

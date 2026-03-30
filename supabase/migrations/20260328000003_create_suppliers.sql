@@ -43,7 +43,7 @@ CREATE POLICY "suppliers_select" ON suppliers
 
 CREATE POLICY "suppliers_admin" ON suppliers
   FOR ALL TO authenticated USING (
-    public.user_role() IN ('ADMIN_CO', 'FINANCE_CO')
+    public.user_role() IN ('ADMIN_CO', 'FINANCE_CO', 'MANAGER')
   ) WITH CHECK (
-    public.user_role() IN ('ADMIN_CO', 'FINANCE_CO')
+    public.user_role() IN ('ADMIN_CO', 'FINANCE_CO', 'MANAGER')
   );

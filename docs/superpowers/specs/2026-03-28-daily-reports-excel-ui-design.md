@@ -91,7 +91,7 @@ Opens when clicking the `▸` button on any row. Uses shadcn `Sheet` component w
 **Header:**
 - Date + property name + status Badge
 
-**Section: Z-отчет** (only departments with fiscal devices)
+**Section: Z-отчет** (all departments)
 
 Per department row:
 - Department name label

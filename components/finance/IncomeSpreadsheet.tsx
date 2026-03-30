@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
+import { FilterSelect } from '@/components/finance/FilterSelect'
 import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
 import type {
   IncomeEntry,
@@ -16,10 +17,18 @@ export type IncomeEntryWithJoins = IncomeEntry & {
   usali_accounts: { code: string; name: string } | null
 }
 
+type PaymentSource = {
+  id: string
+  name: string
+  type: 'bank' | 'cash'
+  allowed_payments: string[]
+}
+
 interface Props {
   entries: IncomeEntryWithJoins[]
   properties: Array<{ id: string; name: string }>
-  bankAccounts: Array<{ id: string; name: string; iban: string }>
+  bankAccounts: Array<{ id: string; name: string; iban: string; allowed_payments: string[] }>
+  coCash: Array<{ id: string; name: string; allowed_payments: string[] }>
   loans: Array<{ id: string; bank: string; name: string }>
   accounts: Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>
   canCreate: boolean
@@ -77,17 +86,18 @@ const selectCls =
 const selectErrCls =
   'bg-transparent border border-destructive rounded px-1 py-0.5 text-xs w-full focus:outline-none focus:ring-1 focus:ring-destructive [&_option]:bg-zinc-900 [&_option]:text-zinc-100'
 
-export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, accounts, canCreate }: Props) {
+export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAccounts, coCash, loans, accounts, canCreate }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
 
+  const [entries, setEntries] = useState<IncomeEntryWithJoins[]>(initialEntries ?? [])
   const [entryDate, setEntryDate] = useState(today)
   const [propertyId, setPropertyId] = useState('')
   const [type, setType] = useState<IncomeEntryType | ''>('')
   const [accountId, setAccountId] = useState('')
   const [amount, setAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<IncomePaymentMethod | ''>('')
-  const [payer, setPayer] = useState('')
+  const [paymentSourceId, setPaymentSourceId] = useState('')
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -97,6 +107,18 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
   const showCategory = type.startsWith('INC_')
   const total = entries.reduce((sum, e) => sum + e.amount, 0)
 
+  // Payment sources filtered by payment method
+  const allSources: PaymentSource[] = [
+    ...bankAccounts.map(ba => ({ id: ba.id, name: `🏦 ${ba.name}`, type: 'bank' as const, allowed_payments: ba.allowed_payments ?? [] })),
+    ...coCash.map(c => ({ id: c.id, name: `💰 ${c.name}`, type: 'cash' as const, allowed_payments: c.allowed_payments ?? [] })),
+  ]
+  // Map BANK/CASH to allowed_payments values
+  const pmMapping: Record<string, string> = { BANK: 'BANK_TRANSFER', CASH: 'CASH' }
+  const mappedPM = paymentMethod ? pmMapping[paymentMethod] : ''
+  const filteredSources = mappedPM
+    ? allSources.filter(s => s.allowed_payments.length === 0 || s.allowed_payments.includes(mappedPM))
+    : allSources
+
   function validate(): boolean {
     const errs: Record<string, boolean> = {}
     if (!entryDate) errs.entryDate = true
@@ -104,8 +126,9 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
     if (!type) errs.type = true
     if (!amount || parseFloat(amount) <= 0) errs.amount = true
     if (!paymentMethod) errs.paymentMethod = true
-    if (!payer.trim()) errs.payer = true
+    // payer removed
     if (showCategory && !accountId) errs.accountId = true
+    if (!paymentSourceId) errs.paymentSourceId = true
     setFieldErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -119,14 +142,16 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
 
     setLoading(true)
     try {
+      const selectedSource = allSources.find(s => s.id === paymentSourceId)
       const body = {
         entry_date: entryDate,
         property_id: propertyId,
         type,
         amount: parseFloat(amount),
         payment_method: paymentMethod,
-        payer: payer.trim(),
+        payer: '-',
         account_id: showCategory && accountId ? accountId : null,
+        bank_account_id: selectedSource?.type === 'bank' ? selectedSource.id : null,
       }
 
       const res = await fetch('/api/finance/income', {
@@ -146,14 +171,26 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
         return
       }
 
-      // Clear inputs
+      const saved = await res.json()
+
+      // Optimistic update
+      const property = properties.find(p => p.id === propertyId)
+      const account = accounts.find(a => a.id === accountId)
+      const optimistic: IncomeEntryWithJoins = {
+        ...saved,
+        properties: { name: property?.name ?? '' },
+        usali_accounts: account ? { code: account.code, name: account.name } : null,
+      }
+      setEntries(prev => [optimistic, ...prev])
+
+      // Reset
       setEntryDate(today)
       setPropertyId('')
       setType('')
       setAccountId('')
       setAmount('')
       setPaymentMethod('')
-      setPayer('')
+      setPaymentSourceId('')
       setFieldErrors({})
       router.refresh()
     } catch {
@@ -181,12 +218,105 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Сметка</th>
               <th className="text-right px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Сума</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Плащане</th>
-              <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Платец</th>
+              <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Източник</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Статус</th>
-              {canCreate && <th className="px-2 py-1" />}
             </tr>
           </thead>
           <tbody>
+            {/* New row — at top */}
+            {canCreate && (
+              <tr className="bg-primary/5 border-b border-border">
+                <td className="px-1 py-1">
+                  <input
+                    type="date"
+                    value={entryDate}
+                    onChange={(e) => setEntryDate(e.target.value)}
+                    className={fieldErrors.entryDate ? inputErrCls : inputCls}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[120px]">
+                  <FilterSelect
+                    value={propertyId}
+                    onChange={setPropertyId}
+                    options={properties.map(p => ({ value: p.id, label: p.name }))}
+                    placeholder="Обект..."
+                    error={fieldErrors.propertyId}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[100px]">
+                  <FilterSelect
+                    value={type}
+                    onChange={(v) => {
+                      setType(v as IncomeEntryType | '')
+                      if (v && !v.startsWith('INC_')) setAccountId('')
+                    }}
+                    options={typeOptions.map(o => ({ value: o.value, label: o.label }))}
+                    placeholder="Тип..."
+                    error={fieldErrors.type}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[100px]">
+                  {showCategory ? (
+                    <FilterSelect
+                      value={accountId}
+                      onChange={setAccountId}
+                      options={accounts
+                        .filter(a => a.account_type === 'REVENUE' && a.level === 3 && !isHidden(a.id))
+                        .map(a => ({ value: a.id, label: a.name }))}
+                      placeholder="Сметка..."
+                      error={fieldErrors.accountId}
+                    />
+                  ) : (
+                    <span className="text-muted-foreground px-1">—</span>
+                  )}
+                </td>
+                <td className="px-1 py-1 min-w-[90px]">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                    className={`${fieldErrors.amount ? inputErrCls : inputCls} text-right`}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[80px]">
+                  <FilterSelect
+                    value={paymentMethod}
+                    onChange={(v) => {
+                      setPaymentMethod(v as IncomePaymentMethod | '')
+                      setPaymentSourceId('')
+                    }}
+                    options={[
+                      { value: 'BANK', label: 'Банка' },
+                      { value: 'CASH', label: 'Брой' },
+                    ]}
+                    placeholder="Начин..."
+                    error={fieldErrors.paymentMethod}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[120px]">
+                  <FilterSelect
+                    value={paymentSourceId}
+                    onChange={setPaymentSourceId}
+                    options={filteredSources.map(s => ({ value: s.id, label: s.name }))}
+                    placeholder="Каса/Банка..."
+                    error={fieldErrors.paymentSourceId}
+                  />
+                </td>
+                <td className="px-1 py-1 whitespace-nowrap">
+                  <button
+                    onClick={handleSave}
+                    disabled={loading}
+                    className="inline-flex items-center justify-center rounded bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 px-2 py-0.5 text-xs font-medium whitespace-nowrap"
+                  >
+                    {loading ? '...' : 'Запази'}
+                  </button>
+                </td>
+              </tr>
+            )}
+
             {entries.length === 0 && !canCreate && (
               <tr>
                 <td colSpan={8} className="text-center text-muted-foreground py-8">
@@ -212,13 +342,13 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
                   {entry.usali_accounts?.name ?? '—'}
                 </td>
                 <td className="px-2 py-1 text-right font-mono whitespace-nowrap">
-                  {entry.amount.toFixed(2)} лв.
+                  {entry.amount.toFixed(2)} €
                 </td>
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
                   {paymentLabels[entry.payment_method]}
                 </td>
-                <td className="px-2 py-1 text-muted-foreground max-w-[120px] truncate">
-                  {entry.payer}
+                <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
+                  —
                 </td>
                 <td className="px-2 py-1">
                   <Badge
@@ -228,125 +358,19 @@ export function IncomeSpreadsheet({ entries, properties, bankAccounts, loans, ac
                     {statusLabels[entry.status]}
                   </Badge>
                 </td>
-                {canCreate && <td className="px-2 py-1" />}
               </tr>
             ))}
 
             {/* Total row */}
             {entries.length > 0 && (
-              <tr className="border-b border-border bg-muted/20">
-                <td colSpan={4} className="px-2 py-1 font-semibold text-muted-foreground">
-                  Общо ({entries.length} записа)
+              <tr className="border-t-2 border-border bg-muted/30 font-semibold">
+                <td colSpan={4} className="px-2 py-1.5 text-muted-foreground text-xs">
+                  Общо ({entries.length})
                 </td>
-                <td className="px-2 py-1 text-right font-semibold font-mono whitespace-nowrap">
-                  {total.toFixed(2)} лв.
+                <td className="px-2 py-1.5 text-right font-mono text-xs">
+                  {total.toFixed(2)} €
                 </td>
-                <td colSpan={canCreate ? 4 : 3} />
-              </tr>
-            )}
-
-            {/* New row */}
-            {canCreate && (
-              <tr className="bg-primary/5 border-b border-border">
-                <td className="px-2 py-1">
-                  <input
-                    type="date"
-                    value={entryDate}
-                    onChange={(e) => setEntryDate(e.target.value)}
-                    className={fieldErrors.entryDate ? inputErrCls : inputCls}
-                  />
-                </td>
-                <td className="px-2 py-1 min-w-[120px]">
-                  <select
-                    value={propertyId}
-                    onChange={(e) => setPropertyId(e.target.value)}
-                    className={fieldErrors.propertyId ? selectErrCls : selectCls}
-                  >
-                    <option value="">— обект —</option>
-                    {properties.map((p) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-2 py-1 min-w-[100px]">
-                  <select
-                    value={type}
-                    onChange={(e) => {
-                      const v = e.target.value as IncomeEntryType | ''
-                      setType(v)
-                      if (v && !v.startsWith('INC_')) setAccountId('')
-                    }}
-                    className={fieldErrors.type ? selectErrCls : selectCls}
-                  >
-                    <option value="">— тип —</option>
-                    {typeOptions.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-2 py-1 min-w-[100px]">
-                  {showCategory ? (
-                    <select
-                      value={accountId}
-                      onChange={e => setAccountId(e.target.value)}
-                      className="w-full bg-transparent text-xs border-0 focus:ring-1 focus:ring-primary px-1 py-0.5 [&_option]:bg-zinc-900 [&_option]:text-zinc-100"
-                    >
-                      <option value="">Сметка...</option>
-                      {accounts
-                        .filter(a => a.account_type === 'REVENUE' && a.level === 3 && !isHidden(a.id))
-                        .map(a => (
-                          <option key={a.id} value={a.id}>
-                            {a.name}
-                          </option>
-                        ))}
-                    </select>
-                  ) : (
-                    <span className="text-muted-foreground px-1">—</span>
-                  )}
-                </td>
-                <td className="px-2 py-1 min-w-[90px]">
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                    className={`${fieldErrors.amount ? inputErrCls : inputCls} text-right`}
-                  />
-                </td>
-                <td className="px-2 py-1 min-w-[80px]">
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value as IncomePaymentMethod | '')}
-                    className={fieldErrors.paymentMethod ? selectErrCls : selectCls}
-                  >
-                    <option value="">— начин —</option>
-                    <option value="BANK">Банка</option>
-                    <option value="CASH">Брой</option>
-                  </select>
-                </td>
-                <td className="px-2 py-1 min-w-[120px]">
-                  <input
-                    type="text"
-                    value={payer}
-                    onChange={(e) => setPayer(e.target.value)}
-                    placeholder="Платец"
-                    className={fieldErrors.payer ? inputErrCls : inputCls}
-                  />
-                </td>
-                <td className="px-2 py-1">
-                  <span className="text-muted-foreground text-[10px]">нов</span>
-                </td>
-                <td className="px-2 py-1">
-                  <button
-                    onClick={handleSave}
-                    disabled={loading}
-                    className="inline-flex items-center justify-center rounded bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 px-2 py-0.5 text-xs font-medium whitespace-nowrap"
-                  >
-                    {loading ? '...' : 'Запази'}
-                  </button>
-                </td>
+                <td colSpan={4} />
               </tr>
             )}
           </tbody>

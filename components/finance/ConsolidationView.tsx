@@ -132,7 +132,7 @@ export function ConsolidationView({ consolidation, dailyReports }: Props) {
       {/* Daily Reports Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Отдели</CardTitle>
+          <CardTitle className="text-lg">Точки на продажба</CardTitle>
         </CardHeader>
         <CardContent>
           {dailyReports.length === 0 ? (
@@ -143,7 +143,7 @@ export function ConsolidationView({ consolidation, dailyReports }: Props) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Отдел</TableHead>
+                  <TableHead>Точка</TableHead>
                   <TableHead className="text-right">Каса нето</TableHead>
                   <TableHead className="text-right">POS нето</TableHead>
                   <TableHead className="text-right">Разлика</TableHead>

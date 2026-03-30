@@ -14,6 +14,8 @@ const expenseBaseSchema = z.object({
   amount_net: z.number().positive(),
   vat_amount: z.number().min(0),
   payment_method: z.enum(['BANK_TRANSFER', 'CASH', 'CARD', 'OTHER']),
+  bank_account_id: z.string().uuid().nullable().optional(),
+  co_cash_id: z.string().uuid().nullable().optional(),
   attachment_url: z.string().url().nullable().optional(),
   note: z.string().nullable().optional(),
 })
@@ -26,12 +28,6 @@ export const createExpenseSchema = expenseBaseSchema.refine(
 export const updateExpenseSchema = expenseBaseSchema.partial()
 
 export const submitExpenseSchema = expenseBaseSchema.refine(
-  (data) => {
-    if (data.document_type === 'EXPENSE_ORDER' && data.note && data.note.length > 0) return true
-    return data.attachment_url != null && data.attachment_url.length > 0
-  },
-  { message: 'Прикачен файл е задължителен при изпращане', path: ['attachment_url'] }
-).refine(
   (data) => data.document_type !== 'NO_DOCUMENT' || (data.note && data.note.length > 0),
   { message: 'Бележка е задължителна при липса на документ', path: ['note'] }
 )

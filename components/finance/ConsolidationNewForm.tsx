@@ -141,7 +141,7 @@ export function ConsolidationNewForm({ propertyId, propertyName, date: initialDa
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Отдел</TableHead>
+                  <TableHead>Точка</TableHead>
                   <TableHead className="text-right">Каса нето</TableHead>
                   <TableHead className="text-right">POS нето</TableHead>
                   <TableHead className="text-right">Разлика</TableHead>
@@ -177,7 +177,7 @@ export function ConsolidationNewForm({ propertyId, propertyName, date: initialDa
           <div className="mt-6">
             {!allConfirmed && reports.length > 0 && (
               <p className="text-sm text-muted-foreground mb-3">
-                Всички отдели трябва да имат потвърдени отчети, за да изпратите консолидацията.
+                Всички точки трябва да имат потвърдени отчети, за да изпратите консолидацията.
               </p>
             )}
             <Button

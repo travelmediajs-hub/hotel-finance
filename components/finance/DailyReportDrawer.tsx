@@ -101,8 +101,6 @@ export function DailyReportDrawer({
     }
   }, [report])
 
-  if (!report) return null
-
   function updateLine(deptId: string, field: keyof DrawerLineData, value: number | string) {
     setLines((prev) =>
       prev.map((l) => (l.department_id === deptId ? { ...l, [field]: value } : l))
@@ -131,7 +129,6 @@ export function DailyReportDrawer({
     }
   }
 
-  const fiscalDepts = departments.filter((d) => d.has_fiscal)
   const totalCashDiff = lines.reduce((s, l) => s + l.cash_diff, 0)
   const totalPosDiff = lines.reduce((s, l) => s + l.pos_diff, 0)
   const totalDiff = totalCashDiff + totalPosDiff
@@ -139,6 +136,12 @@ export function DailyReportDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-[400px] sm:max-w-[400px] overflow-y-auto">
+        {!report ? (
+          <SheetHeader>
+            <SheetTitle>Зареждане...</SheetTitle>
+            <SheetDescription />
+          </SheetHeader>
+        ) : (<>
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             {report.date}
@@ -155,10 +158,10 @@ export function DailyReportDrawer({
           )}
 
           {/* Z-report section */}
-          {fiscalDepts.length > 0 && (
+          {departments.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-sm font-medium">Z-отчет</h3>
-              {fiscalDepts.map((dept) => {
+              {departments.map((dept) => {
                 const line = lines.find((l) => l.department_id === dept.id)
                 if (!line) return null
                 const editable = canEdit && canEditDept(dept.id)
@@ -188,9 +191,9 @@ export function DailyReportDrawer({
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs">Z-файл</Label>
+                      <Label className="text-xs">Z-файл (незадължителен)</Label>
                       <Input
-                        type="url" placeholder="https://..."
+                        placeholder="линк към файл..."
                         value={line.z_attachment_url}
                         disabled={!editable}
                         onChange={(e) => updateLine(dept.id, 'z_attachment_url', e.target.value)}
@@ -283,7 +286,7 @@ export function DailyReportDrawer({
             <div className="space-y-2">
               <Label className="text-sm">Общ файл (незадължителен)</Label>
               <Input
-                type="url" placeholder="https://..."
+                placeholder="линк към файл..."
                 value={generalAttachment}
                 onChange={(e) => setGeneralAttachment(e.target.value)}
                 className="h-8 text-sm"
@@ -311,6 +314,7 @@ export function DailyReportDrawer({
             </Button>
           </SheetFooter>
         )}
+        </>)}
       </SheetContent>
     </Sheet>
   )

@@ -44,31 +44,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  // Check Z-report attachments for departments with fiscal devices
-  const { data: departments } = await supabase
-    .from('departments')
-    .select('id, fiscal_device_id')
-    .eq('property_id', report.property_id)
-    .eq('status', 'ACTIVE')
-
-  const deptsWithFiscal = new Set(
-    (departments ?? []).filter((d) => d.fiscal_device_id).map((d) => d.id)
-  )
-
-  for (const line of lines) {
-    const hasFiscal = deptsWithFiscal.has(line.department_id)
-    const hasActivity = Number(line.cash_income) > 0 || Number(line.pos_income) > 0
-    if (hasFiscal && hasActivity && !line.z_attachment_url) {
-      return NextResponse.json(
-        {
-          error: 'validation_error',
-          message: 'Z-отчет файл е задължителен за отдели с фискално устройство',
-        },
-        { status: 400 }
-      )
-    }
-  }
-
   // Parse body for optional fields
   let bodyData: { diff_explanation?: string; general_attachment_url?: string } = {}
   try {

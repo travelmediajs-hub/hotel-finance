@@ -259,7 +259,7 @@ export function MonthlyReportView({ properties, defaultPropertyId }: Props) {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">Ден</TableHead>
-                    <TableHead className="text-right">Събрани (лв)</TableHead>
+                    <TableHead className="text-right">Събрани (€)</TableHead>
                     <TableHead>Събрал</TableHead>
                     <TableHead className="text-right">Разлика</TableHead>
                   </TableRow>

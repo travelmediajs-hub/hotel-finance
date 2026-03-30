@@ -141,15 +141,17 @@ export function BankingTabs({
                   <TableHead>Банка</TableHead>
                   <TableHead>Валута</TableHead>
                   <TableHead>Тип</TableHead>
-                  <TableHead className="text-right">Начално салдо</TableHead>
-                  <TableHead className="text-right">Текущо салдо</TableHead>
+                  <TableHead className="text-right">Нач. салдо</TableHead>
+                  <TableHead className="text-right">Приходи</TableHead>
+                  <TableHead className="text-right">Разходи</TableHead>
+                  <TableHead className="text-right">Тек. салдо</TableHead>
                   <TableHead>Статус</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {accounts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    <TableCell colSpan={10} className="text-center text-muted-foreground">
                       Няма банкови сметки
                     </TableCell>
                   </TableRow>
@@ -166,6 +168,12 @@ export function BankingTabs({
                       <TableCell>{accountTypeLabels[acc.account_type] ?? acc.account_type}</TableCell>
                       <TableCell className="text-right font-mono">
                         {acc.opening_balance.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-green-500">
+                        {(bal?.total_income ?? 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-red-500">
+                        {(bal?.total_expense ?? 0).toFixed(2)}
                       </TableCell>
                       <TableCell className={`text-right font-mono ${currentBalance > 0 ? 'text-green-500' : currentBalance < 0 ? 'text-red-500' : ''}`}>
                         {currentBalance.toFixed(2)}

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const activeOnly = req.nextUrl.searchParams.get('active_only') !== 'false'
   let query = supabase
     .from('suppliers')
-    .select('id, name, eik, vat_number, is_active')
+    .select('id, name, eik, vat_number, contact_person, phone, email, is_active')
     .order('name')
 
   if (activeOnly) query = query.eq('is_active', true)
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const user = await getFinanceUser()
-  if (!user || !['ADMIN_CO', 'FINANCE_CO'].includes(user.realRole)) {
+  if (!user || !['ADMIN_CO', 'FINANCE_CO', 'MANAGER'].includes(user.role)) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 

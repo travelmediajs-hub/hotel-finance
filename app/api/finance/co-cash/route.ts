@@ -45,16 +45,22 @@ export async function POST(request: NextRequest) {
   const parsed = createCOCashSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'validation_error', details: parsed.error.flatten() },
+      { error: 'validation_error', message: parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', '), details: parsed.error.flatten() },
       { status: 400 }
     )
   }
 
   const supabase = await createClient()
 
+  const { allowed_payments, ...baseData } = parsed.data
+  const insertData: Record<string, unknown> = { ...baseData }
+  if (allowed_payments && allowed_payments.length > 0) {
+    insertData.allowed_payments = allowed_payments
+  }
+
   const { data, error } = await supabase
     .from('co_cash')
-    .insert(parsed.data)
+    .insert(insertData)
     .select()
     .single()
 

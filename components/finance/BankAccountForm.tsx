@@ -17,7 +17,6 @@ interface Props {
 }
 
 const currencyOptions = [
-  { value: 'BGN', label: 'BGN' },
   { value: 'EUR', label: 'EUR' },
   { value: 'USD', label: 'USD' },
 ]
@@ -29,6 +28,13 @@ const accountTypeOptions = [
   { value: 'DEPOSIT', label: 'Депозитна' },
 ]
 
+const paymentOptions = [
+  { value: 'BANK_TRANSFER', label: 'Банков превод' },
+  { value: 'CARD', label: 'Карта' },
+  { value: 'CASH', label: 'Брой' },
+  { value: 'OTHER', label: 'Друго' },
+]
+
 export function BankAccountForm({ trigger }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -36,6 +42,7 @@ export function BankAccountForm({ trigger }: Props) {
   const [loading, setLoading] = useState(false)
   const [currency, setCurrency] = useState('')
   const [accountType, setAccountType] = useState('')
+  const [allowedPayments, setAllowedPayments] = useState<string[]>(['BANK_TRANSFER', 'CARD'])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -51,11 +58,18 @@ export function BankAccountForm({ trigger }: Props) {
       account_type: accountType,
       opening_balance: parseFloat(formData.get('opening_balance') as string),
       opening_balance_date: (formData.get('opening_balance_date') as string)?.trim(),
+      allowed_payments: allowedPayments,
       note: (formData.get('note') as string)?.trim() || null,
     }
 
     if (!currency || !accountType) {
       setError('Моля, изберете валута и тип на сметката')
+      setLoading(false)
+      return
+    }
+
+    if (allowedPayments.length === 0) {
+      setError('Моля, изберете поне един вид плащане')
       setLoading(false)
       return
     }
@@ -137,6 +151,28 @@ export function BankAccountForm({ trigger }: Props) {
             <div className="space-y-2">
               <Label htmlFor="ba-date">Дата на начално салдо *</Label>
               <Input id="ba-date" name="opening_balance_date" type="date" required />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label>Видове плащания *</Label>
+              <div className="flex flex-wrap gap-4">
+                {paymentOptions.map(opt => (
+                  <label key={opt.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={allowedPayments.includes(opt.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAllowedPayments(prev => [...prev, opt.value])
+                        } else {
+                          setAllowedPayments(prev => prev.filter(v => v !== opt.value))
+                        }
+                      }}
+                      className="rounded border-border"
+                    />
+                    {opt.label}
+                  </label>
+                ))}
+              </div>
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="ba-note">Бележка</Label>

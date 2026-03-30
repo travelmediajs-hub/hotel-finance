@@ -35,7 +35,7 @@ export type DeliveryMethod = 'IN_PERSON' | 'COURIER' | 'BANK_TRANSFER'
 
 export type MoneyReceivedStatus = 'SENT' | 'RECEIVED' | 'ACCOUNTED'
 
-export type Currency = 'BGN' | 'EUR' | 'USD'
+export type Currency = 'EUR' | 'USD'
 
 export type BankAccountType = 'CURRENT' | 'SAVINGS' | 'CREDIT' | 'DEPOSIT'
 
@@ -153,7 +153,9 @@ export interface Department {
   manager_id: string
   authorized_person_id: string | null
   fiscal_device_id: string | null
+  pos_terminal_id: string | null
   usali_template_id: string | null
+  sort_order: number
   status: ActiveStatus
   created_at: string
   updated_at: string
@@ -250,6 +252,8 @@ export interface Expense {
   vat_amount: number
   total_amount: number // generated
   payment_method: PaymentMethod
+  bank_account_id: string | null
+  co_cash_id: string | null
   paid_at: string | null
   paid_from_cash: string | null
   status: ExpenseStatus
@@ -314,6 +318,7 @@ export interface BankAccount {
   opening_balance: number
   opening_balance_date: string
   status: ActiveStatus
+  allowed_payments: PaymentMethod[]
   note: string | null
   created_at: string
   updated_at: string
@@ -375,6 +380,7 @@ export interface COCash {
   name: string
   opening_balance: number
   opening_balance_date: string
+  allowed_payments: PaymentMethod[]
   created_at: string
   updated_at: string
 }

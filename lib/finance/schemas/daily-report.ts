@@ -13,7 +13,7 @@ export const dailyReportLineSchema = z.object({
   pos_refund: nonNegativeDecimal,
   z_cash: nonNegativeDecimal,
   z_pos: nonNegativeDecimal,
-  z_attachment_url: z.string().url().nullable().optional(),
+  z_attachment_url: z.string().nullable().optional(),
   pos_report_amount: nonNegativeDecimal,
 })
 
@@ -36,7 +36,7 @@ export const updateLineSchema = z.object({
   pos_refund: nonNegativeDecimal.optional(),
   z_cash: nonNegativeDecimal.optional(),
   z_pos: nonNegativeDecimal.optional(),
-  z_attachment_url: z.string().url().nullable().optional(),
+  z_attachment_url: z.string().nullable().optional(),
   pos_report_amount: nonNegativeDecimal.optional(),
 })
 
@@ -44,7 +44,7 @@ export const updateLineSchema = z.object({
 // SUBMIT REPORT
 // ============================================================
 export const submitDailyReportSchema = z.object({
-  general_attachment_url: z.string().url().nullable().optional(),
+  general_attachment_url: z.string().nullable().optional(),
   diff_explanation: z.string().nullable().optional(),
 })
 

@@ -68,11 +68,11 @@ export function UsaliRevenueAnalysis({ propertyId, year, month }: Props) {
     { label: 'Продадени стаи', current: fmt(data.current.roomsSold, 0), prev: fmt(data.previousMonth?.roomsSold, 0), yoy: fmt(data.previousYear?.roomsSold, 0) },
     { label: 'Гости', current: fmt(data.current.guests, 0), prev: fmt(data.previousMonth?.guests, 0), yoy: fmt(data.previousYear?.guests, 0) },
     { label: 'Заетост %', current: pct(data.current.occupancyPercent), prev: pct(data.previousMonth?.occupancyPercent), yoy: pct(data.previousYear?.occupancyPercent) },
-    { label: 'ADR (лв.)', current: fmt(data.current.adr), prev: fmt(data.previousMonth?.adr), yoy: fmt(data.previousYear?.adr) },
-    { label: 'RevPAR (лв.)', current: fmt(data.current.revpar), prev: fmt(data.previousMonth?.revpar), yoy: fmt(data.previousYear?.revpar) },
-    { label: 'Общ приход/стая (лв.)', current: fmt(data.current.totalRevenuePerRoom), prev: fmt(data.previousMonth?.totalRevenuePerRoom), yoy: fmt(data.previousYear?.totalRevenuePerRoom) },
-    { label: 'Приход стаи (лв.)', current: fmt(data.current.roomRevenue), prev: fmt(data.previousMonth?.roomRevenue), yoy: fmt(data.previousYear?.roomRevenue) },
-    { label: 'Общ приход (лв.)', current: fmt(data.current.totalRevenue), prev: fmt(data.previousMonth?.totalRevenue), yoy: fmt(data.previousYear?.totalRevenue) },
+    { label: 'ADR (€)', current: fmt(data.current.adr), prev: fmt(data.previousMonth?.adr), yoy: fmt(data.previousYear?.adr) },
+    { label: 'RevPAR (€)', current: fmt(data.current.revpar), prev: fmt(data.previousMonth?.revpar), yoy: fmt(data.previousYear?.revpar) },
+    { label: 'Общ приход/стая (€)', current: fmt(data.current.totalRevenuePerRoom), prev: fmt(data.previousMonth?.totalRevenuePerRoom), yoy: fmt(data.previousYear?.totalRevenuePerRoom) },
+    { label: 'Приход стаи (€)', current: fmt(data.current.roomRevenue), prev: fmt(data.previousMonth?.roomRevenue), yoy: fmt(data.previousYear?.roomRevenue) },
+    { label: 'Общ приход (€)', current: fmt(data.current.totalRevenue), prev: fmt(data.previousMonth?.totalRevenue), yoy: fmt(data.previousYear?.totalRevenue) },
   ]
 
   return (

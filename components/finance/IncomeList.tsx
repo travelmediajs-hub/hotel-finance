@@ -82,7 +82,7 @@ export function IncomeList({ entries }: Props) {
               {entry.usali_accounts?.name ?? '—'}
             </TableCell>
             <TableCell className="text-right font-mono">
-              {entry.amount.toFixed(2)} лв.
+              {entry.amount.toFixed(2)} €
             </TableCell>
             <TableCell className="text-muted-foreground">
               {entry.payer}

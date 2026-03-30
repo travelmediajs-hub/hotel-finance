@@ -8,24 +8,31 @@ import {
 } from '@/components/ui/table'
 import { DepartmentForm } from './DepartmentForm'
 import { Plus, Pencil } from 'lucide-react'
-import type { Department } from '@/types/finance'
+import type { Department, FiscalDevice, POSTerminal } from '@/types/finance'
 
 interface Props {
   propertyId: string
   departments: Department[]
+  fiscalDevices: FiscalDevice[]
+  posTerminals: POSTerminal[]
 }
 
-export function DepartmentList({ propertyId, departments }: Props) {
+export function DepartmentList({ propertyId, departments, fiscalDevices, posTerminals }: Props) {
+  const fdMap = new Map(fiscalDevices.map(fd => [fd.id, fd]))
+  const ptMap = new Map(posTerminals.map(pt => [pt.id, pt]))
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-        <CardTitle className="text-base">Отдели</CardTitle>
+        <CardTitle className="text-base">Точки на продажба</CardTitle>
         <DepartmentForm
           propertyId={propertyId}
+          fiscalDevices={fiscalDevices}
+          posTerminals={posTerminals}
           trigger={
             <Button size="sm">
               <Plus className="h-4 w-4 mr-2" />
-              Добави отдел
+              Нова точка
             </Button>
           }
         />
@@ -33,43 +40,55 @@ export function DepartmentList({ propertyId, departments }: Props) {
       <CardContent>
         {departments.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
-            Няма добавени отдели.
+            Няма точки на продажба.
           </p>
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">#</TableHead>
                 <TableHead>Име</TableHead>
-                <TableHead>Управител (ID)</TableHead>
+                <TableHead>Касов апарат</TableHead>
+                <TableHead>POS терминал</TableHead>
                 <TableHead>Статус</TableHead>
                 <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {departments.map(dept => (
-                <TableRow key={dept.id}>
-                  <TableCell className="font-medium">{dept.name}</TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {dept.manager_id}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={dept.status === 'ACTIVE' ? 'default' : 'secondary'}>
-                      {dept.status === 'ACTIVE' ? 'Активен' : 'Неактивен'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <DepartmentForm
-                      propertyId={propertyId}
-                      department={dept}
-                      trigger={
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
-                      }
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
+              {[...departments].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)).map(dept => {
+                const fd = dept.fiscal_device_id ? fdMap.get(dept.fiscal_device_id) : null
+                const pt = dept.pos_terminal_id ? ptMap.get(dept.pos_terminal_id) : null
+                return (
+                  <TableRow key={dept.id}>
+                    <TableCell className="text-muted-foreground text-xs">{dept.sort_order ?? 0}</TableCell>
+                    <TableCell className="font-medium">{dept.name}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {fd ? `${fd.serial_number}${fd.location ? ` (${fd.location})` : ''}` : '—'}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs">
+                      {pt ? `${pt.tid} — ${pt.bank}` : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={dept.status === 'ACTIVE' ? 'default' : 'secondary'}>
+                        {dept.status === 'ACTIVE' ? 'Активна' : 'Неактивна'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <DepartmentForm
+                        propertyId={propertyId}
+                        department={dept}
+                        fiscalDevices={fiscalDevices}
+                        posTerminals={posTerminals}
+                        trigger={
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         )}

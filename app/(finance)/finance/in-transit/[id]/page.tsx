@@ -1,12 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getFinanceUser, isCORole } from '@/lib/finance/auth'
-import { InTransitCloseForm } from '@/components/finance/InTransitCloseForm'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
 import type { InTransitStatus, InTransitSourceType, Currency } from '@/types/finance'
 
 interface Props {
@@ -14,9 +10,9 @@ interface Props {
 }
 
 const statusLabels: Record<InTransitStatus, string> = {
-  OPEN: 'Отворено',
-  PARTIALLY_CLOSED: 'Частично затворено',
-  CLOSED: 'Затворено',
+  OPEN: 'В движение',
+  PARTIALLY_CLOSED: 'Частично приключен',
+  CLOSED: 'Приключен',
 }
 
 const statusClasses: Record<InTransitStatus, string> = {
@@ -25,16 +21,35 @@ const statusClasses: Record<InTransitStatus, string> = {
   CLOSED: 'bg-green-500/15 text-green-500 border-green-500/30',
 }
 
-const sourceTypeLabels: Record<InTransitSourceType, string> = {
+const locTypeLabels: Record<InTransitSourceType, string> = {
   BANK_ACCOUNT: 'Банкова сметка',
   PROPERTY_CASH: 'Каса на обект',
   CO_CASH: 'Каса ЦО',
 }
 
 const currencySymbols: Record<Currency, string> = {
-  BGN: 'лв.',
   EUR: '€',
   USD: '$',
+}
+
+async function resolveLocationName(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  type: InTransitSourceType,
+  id: string,
+): Promise<string> {
+  if (type === 'BANK_ACCOUNT') {
+    const { data } = await supabase.from('bank_accounts').select('name, iban').eq('id', id).single()
+    return data ? `${data.name} (${data.iban})` : id
+  }
+  if (type === 'CO_CASH') {
+    const { data } = await supabase.from('co_cash').select('name').eq('id', id).single()
+    return data?.name ?? id
+  }
+  if (type === 'PROPERTY_CASH') {
+    const { data } = await supabase.from('properties').select('name').eq('id', id).single()
+    return data?.name ?? id
+  }
+  return id
 }
 
 export default async function InTransitDetailPage({ params }: Props) {
@@ -54,7 +69,7 @@ export default async function InTransitDetailPage({ params }: Props) {
   if (!inTransit) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <p className="text-sm text-muted-foreground">Обръщението не е намерено.</p>
+        <p className="text-sm text-muted-foreground">Трансферът не е намерен.</p>
       </div>
     )
   }
@@ -67,21 +82,51 @@ export default async function InTransitDetailPage({ params }: Props) {
     source_type: InTransitSourceType
     source_id: string
     amount: number
-    withdrawal_id: string | null
   }[]
 
+  // Resolve human-readable names
+  const sourceName = sources[0]
+    ? await resolveLocationName(supabase, sources[0].source_type, sources[0].source_id)
+    : '—'
+  const sourceTypeLabel = sources[0] ? locTypeLabels[sources[0].source_type] : '—'
+
+  const destType = inTransit.destination_type as InTransitSourceType | null
+  const destId = inTransit.destination_id as string | null
+  const destName = destType && destId
+    ? await resolveLocationName(supabase, destType, destId)
+    : null
+  const destTypeLabel = destType ? locTypeLabels[destType] : null
+
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
-      {/* Заглавие */}
+    <div className="p-6 max-w-3xl mx-auto space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-start justify-between space-y-0">
-          <CardTitle className="text-lg">Обръщение</CardTitle>
+          <CardTitle className="text-lg">Паричен трансфер</CardTitle>
           <Badge variant="outline" className={statusClasses[status]}>
             {statusLabels[status]}
           </Badge>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="space-y-1">
+              <div className="text-muted-foreground">Откъде</div>
+              <div>{sourceTypeLabel}: <span className="font-medium">{sourceName}</span></div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-muted-foreground">Накъде</div>
+              <div>
+                {destTypeLabel && destName
+                  ? <>{destTypeLabel}: <span className="font-medium">{destName}</span></>
+                  : <span className="text-muted-foreground">—</span>
+                }
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-muted-foreground">Сума</div>
+              <div className="font-mono font-medium">
+                {inTransit.total_amount.toFixed(2)} {currSym}
+              </div>
+            </div>
             <div className="space-y-1">
               <div className="text-muted-foreground">Носител</div>
               <div>
@@ -98,24 +143,12 @@ export default async function InTransitDetailPage({ params }: Props) {
               </div>
             </div>
             <div className="space-y-1">
-              <div className="text-muted-foreground">Обща сума</div>
-              <div className="font-mono font-medium">
-                {inTransit.total_amount.toFixed(2)} {currSym}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <div className="text-muted-foreground">Остатък</div>
-              <div className="font-mono font-medium">
-                {inTransit.remaining_amount.toFixed(2)} {currSym}
-              </div>
-            </div>
-            <div className="space-y-1">
               <div className="text-muted-foreground">Валута</div>
               <div>{inTransit.currency}</div>
             </div>
             {inTransit.closed_at && (
               <div className="space-y-1">
-                <div className="text-muted-foreground">Затворено на</div>
+                <div className="text-muted-foreground">Приключен на</div>
                 <div>{new Date(inTransit.closed_at).toLocaleString('bg-BG')}</div>
               </div>
             )}
@@ -129,60 +162,14 @@ export default async function InTransitDetailPage({ params }: Props) {
         </CardContent>
       </Card>
 
-      {/* Източници */}
-      {sources.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Източници</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Тип</TableHead>
-                  <TableHead>ID</TableHead>
-                  <TableHead className="text-right">Сума</TableHead>
-                  <TableHead>Теглене ID</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sources.map(src => (
-                  <TableRow key={src.id}>
-                    <TableCell>{sourceTypeLabels[src.source_type]}</TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {src.source_id}
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {src.amount.toFixed(2)} {currSym}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      {src.withdrawal_id ?? '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Метаданни */}
       <Card>
         <CardContent className="pt-6">
           <div className="text-xs text-muted-foreground space-y-1">
-            <div>Създадено на: {new Date(inTransit.created_at).toLocaleString('bg-BG')}</div>
+            <div>Създадено: {new Date(inTransit.created_at).toLocaleString('bg-BG')}</div>
             <div>Последна промяна: {new Date(inTransit.updated_at).toLocaleString('bg-BG')}</div>
           </div>
         </CardContent>
       </Card>
-
-      {/* Затваряне */}
-      {(status === 'OPEN' || status === 'PARTIALLY_CLOSED') && (
-        <InTransitCloseForm
-          inTransitId={inTransit.id}
-          remainingAmount={inTransit.remaining_amount}
-        />
-      )}
     </div>
   )
 }

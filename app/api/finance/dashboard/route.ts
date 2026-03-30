@@ -115,6 +115,20 @@ export async function GET() {
       .order('sent_date', { ascending: false }),
   ])
 
+  // Check for critical errors
+  const errors = [
+    accountsResult.error && `bank_accounts: ${accountsResult.error.message}`,
+    balancesResult.error && `bank_account_balances: ${balancesResult.error.message}`,
+    coCashResult.error && `co_cash: ${coCashResult.error.message}`,
+    coCashBalancesResult.error && `co_cash_balances: ${coCashBalancesResult.error.message}`,
+    loansResult.error && `loans: ${loansResult.error.message}`,
+    loanBalancesResult.error && `loan_balances: ${loanBalancesResult.error.message}`,
+  ].filter(Boolean)
+
+  if (errors.length > 0) {
+    return NextResponse.json({ error: 'database_error', details: errors }, { status: 500 })
+  }
+
   // --- Build bank accounts with balances and last transaction ---
   const balanceMap = new Map(
     (balancesResult.data ?? []).map((b) => [b.id, b.current_balance as number])
@@ -138,25 +152,19 @@ export async function GET() {
     last_transaction_date: lastTxMap.get(acct.id) ?? null,
   }))
 
-  // --- CO cash: sum all registers ---
+  // --- CO cash: per register + total ---
   const coCashBalanceMap = new Map(
     (coCashBalancesResult.data ?? []).map((b) => [b.id, b.current_balance as number])
   )
-  const totalCoCash = (coCashResult.data ?? []).reduce(
-    (sum, cc) => sum + (coCashBalanceMap.get(cc.id) ?? 0),
-    0
-  )
-  // last_updated: use the updated_at from co_cash (most recent)
-  const coCashRaw = await supabase
-    .from('co_cash')
-    .select('updated_at')
-    .order('updated_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
+  const co_cash_registers = (coCashResult.data ?? []).map((cc) => ({
+    id: cc.id,
+    name: cc.name,
+    current_balance: coCashBalanceMap.get(cc.id) ?? 0,
+  }))
+  const totalCoCash = co_cash_registers.reduce((s, c) => s + c.current_balance, 0)
   const co_cash = {
-    current_balance: totalCoCash,
-    last_updated: coCashRaw.data?.updated_at ?? null,
+    registers: co_cash_registers,
+    total_balance: totalCoCash,
   }
 
   // --- Loans ---
@@ -265,7 +273,7 @@ export async function GET() {
 
   const net_cash_position =
     totalBankBalance +
-    co_cash.current_balance -
+    co_cash.total_balance -
     totalPendingExpenses -
     totalUpcomingLoanPayments
 

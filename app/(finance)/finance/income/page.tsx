@@ -55,7 +55,7 @@ export default async function IncomePage() {
       .order('name'),
     supabase
       .from('bank_accounts')
-      .select('id, name, iban')
+      .select('id, name, iban, allowed_payments')
       .eq('status', 'ACTIVE')
       .order('name'),
     supabase
@@ -71,6 +71,8 @@ export default async function IncomePage() {
       .order('sort_order'),
   ])
 
+  const { data: coCashData } = await supabase.from('co_cash').select('id, name, allowed_payments').order('name')
+
   const isCO = user.role === 'ADMIN_CO' || user.role === 'FINANCE_CO'
 
   return (
@@ -81,9 +83,10 @@ export default async function IncomePage() {
         </CardHeader>
         <CardContent>
           <IncomeSpreadsheet
-            entries={(entries as IncomeEntryWithJoins[]) ?? []}
+            entries={((entries ?? []) as IncomeEntryWithJoins[])}
             properties={properties ?? []}
-            bankAccounts={bankAccounts ?? []}
+            bankAccounts={(bankAccounts ?? []).map((ba: Record<string, unknown>) => ({ id: ba.id as string, name: ba.name as string, iban: ba.iban as string, allowed_payments: (ba.allowed_payments as string[] | undefined) ?? [] }))}
+            coCash={(coCashData ?? []).map((c: Record<string, unknown>) => ({ id: c.id as string, name: c.name as string, allowed_payments: (c.allowed_payments as string[] | undefined) ?? [] }))}
             loans={loans ?? []}
             accounts={(accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
             canCreate={isCO}

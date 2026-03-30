@@ -13,11 +13,18 @@ interface Props {
   trigger: React.ReactNode
 }
 
+const paymentOptions = [
+  { value: 'CASH', label: 'Брой' },
+  { value: 'CARD', label: 'Карта' },
+  { value: 'OTHER', label: 'Друго' },
+]
+
 export function COCashForm({ trigger }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [allowedPayments, setAllowedPayments] = useState<string[]>(['CASH'])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -25,10 +32,20 @@ export function COCashForm({ trigger }: Props) {
     setLoading(true)
 
     const formData = new FormData(e.currentTarget)
+    const name = (formData.get('name') as string)?.trim()
+    const openingBalance = parseFloat(formData.get('opening_balance') as string)
+    const openingDate = (formData.get('opening_balance_date') as string)?.trim()
+
+    if (!name) { setError('Моля, въведете име'); setLoading(false); return }
+    if (isNaN(openingBalance)) { setError('Моля, въведете начално салдо'); setLoading(false); return }
+    if (!openingDate) { setError('Моля, въведете дата'); setLoading(false); return }
+    if (allowedPayments.length === 0) { setError('Моля, изберете поне един вид плащане'); setLoading(false); return }
+
     const body = {
-      name: (formData.get('name') as string)?.trim(),
-      opening_balance: parseFloat(formData.get('opening_balance') as string),
-      opening_balance_date: (formData.get('opening_balance_date') as string)?.trim(),
+      name,
+      opening_balance: openingBalance,
+      opening_balance_date: openingDate,
+      allowed_payments: allowedPayments,
     }
 
     try {
@@ -77,6 +94,28 @@ export function COCashForm({ trigger }: Props) {
           <div className="space-y-2">
             <Label htmlFor="co-date">Дата на начално салдо *</Label>
             <Input id="co-date" name="opening_balance_date" type="date" required />
+          </div>
+          <div className="space-y-2">
+            <Label>Видове плащания *</Label>
+            <div className="flex flex-wrap gap-4">
+              {paymentOptions.map(opt => (
+                <label key={opt.value} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allowedPayments.includes(opt.value)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setAllowedPayments(prev => [...prev, opt.value])
+                      } else {
+                        setAllowedPayments(prev => prev.filter(v => v !== opt.value))
+                      }
+                    }}
+                    className="rounded border-border"
+                  />
+                  {opt.label}
+                </label>
+              ))}
+            </div>
           </div>
           <div className="flex gap-3 justify-end">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

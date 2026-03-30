@@ -63,7 +63,7 @@ export function CashCollectionList({ collections }: Props) {
               {col.properties.name}
             </TableCell>
             <TableCell className="text-right font-mono">
-              {col.amount.toFixed(2)} лв.
+              {col.amount.toFixed(2)} €
             </TableCell>
             <TableCell className="text-muted-foreground text-sm">
               {col.covers_date_from} – {col.covers_date_to}

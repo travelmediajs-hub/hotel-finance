@@ -110,7 +110,7 @@ export default async function IncomeDetailPage({ params }: Props) {
             <div className="space-y-1">
               <div className="text-muted-foreground">Сума</div>
               <div className="font-mono font-medium text-base">
-                {entry.amount.toFixed(2)} лв.
+                {entry.amount.toFixed(2)} €
               </div>
             </div>
             <div className="space-y-1">

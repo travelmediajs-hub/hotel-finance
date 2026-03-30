@@ -139,7 +139,7 @@ CREATE POLICY consolidations_manage ON property_consolidations FOR ALL
 CREATE POLICY expenses_select ON expenses FOR SELECT
   USING (public.has_property_access(property_id));
 CREATE POLICY expenses_insert ON expenses FOR INSERT
-  WITH CHECK (public.has_property_access(property_id) AND public.user_role() = 'MANAGER');
+  WITH CHECK (public.has_property_access(property_id) AND public.user_role() IN ('MANAGER', 'ADMIN_CO'));
 CREATE POLICY expenses_update ON expenses FOR UPDATE
   USING (public.has_property_access(property_id));
 

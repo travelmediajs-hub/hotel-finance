@@ -54,7 +54,7 @@ export function ExpenseList({ expenses }: Props) {
         <TableRow>
           <TableHead>Дата</TableHead>
           <TableHead>Обект</TableHead>
-          <TableHead>Отдел</TableHead>
+          <TableHead>Точка</TableHead>
           <TableHead>Доставчик</TableHead>
           <TableHead>Категория</TableHead>
           <TableHead className="text-right">Сума</TableHead>

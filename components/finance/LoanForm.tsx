@@ -43,7 +43,7 @@ export function LoanForm({ accounts, trigger }: Props) {
       principal_amount: parseFloat(formData.get('principal_amount') as string),
       disbursed_amount: (formData.get('disbursed_amount') as string)?.trim()
         ? parseFloat(formData.get('disbursed_amount') as string)
-        : null,
+        : undefined,
       interest_rate: parseFloat(formData.get('interest_rate') as string),
       monthly_payment: parseFloat(formData.get('monthly_payment') as string),
       payment_day: parseInt(formData.get('payment_day') as string, 10),
@@ -77,7 +77,7 @@ export function LoanForm({ accounts, trigger }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement}></DialogTrigger>
+      <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Нов кредит</DialogTitle>

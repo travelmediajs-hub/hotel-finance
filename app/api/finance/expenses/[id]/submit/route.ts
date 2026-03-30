@@ -39,16 +39,6 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  // Rule #5: attachment required (except EXPENSE_ORDER with note)
-  const isExpenseOrderWithNote =
-    expense.document_type === 'EXPENSE_ORDER' && expense.note && expense.note.length > 0
-  if (!isExpenseOrderWithNote && !expense.attachment_url) {
-    return NextResponse.json(
-      { error: 'validation_error', message: 'Прикачен файл е задължителен при изпращане' },
-      { status: 400 }
-    )
-  }
-
   const { data, error } = await supabase
     .from('expenses')
     .update({

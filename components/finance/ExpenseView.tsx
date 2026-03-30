@@ -71,7 +71,7 @@ export function ExpenseView({ expense }: Props) {
             {propertyName}
           </div>
           <div>
-            <span className="text-muted-foreground">Отдел: </span>
+            <span className="text-muted-foreground">Точка: </span>
             {departmentName}
           </div>
           <div>

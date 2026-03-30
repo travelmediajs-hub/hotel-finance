@@ -10,15 +10,21 @@ const inTransitSourceSchema = z.object({
   withdrawal_id: z.string().uuid().nullable().optional(),
 })
 
+const destinationSchema = z.object({
+  destination_type: z.enum(['BANK_ACCOUNT', 'PROPERTY_CASH', 'CO_CASH']),
+  destination_id: z.string().uuid(),
+})
+
 export const createInTransitSchema = z.object({
   total_amount: z.number().positive(),
-  currency: z.enum(['BGN', 'EUR', 'USD']).optional(),
+  currency: z.enum(['EUR', 'USD']).optional(),
   description: z.string().min(1),
+  carried_by_id: z.string().uuid(),
   sources: z.array(inTransitSourceSchema).min(1),
+  destination: destinationSchema.optional(),
 })
 
 export const closeInTransitStepSchema = z.object({
-  in_transit_id: z.string().uuid(),
   amount: z.number().positive(),
   destination_type: z.enum(['BANK_ACCOUNT', 'PROPERTY_CASH', 'CO_CASH']),
   destination_id: z.string().uuid(),

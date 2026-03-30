@@ -72,7 +72,7 @@ export default async function CashCollectionDetailPage({ params }: Props) {
             </div>
             <div>
               <p className="text-muted-foreground">Сума</p>
-              <p className="font-mono font-medium">{col.amount.toFixed(2)} лв.</p>
+              <p className="font-mono font-medium">{col.amount.toFixed(2)} €</p>
             </div>
             <div>
               <p className="text-muted-foreground">Период от</p>

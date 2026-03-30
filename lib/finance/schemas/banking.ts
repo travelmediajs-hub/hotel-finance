@@ -7,10 +7,11 @@ export const createBankAccountSchema = z.object({
   name: z.string().min(1),
   iban: z.string().min(10).max(34),
   bank: z.string().min(1),
-  currency: z.enum(['BGN', 'EUR', 'USD']),
+  currency: z.enum(['EUR', 'USD']),
   account_type: z.enum(['CURRENT', 'SAVINGS', 'CREDIT', 'DEPOSIT']),
   opening_balance: z.number(),
   opening_balance_date: z.string().date(),
+  allowed_payments: z.array(z.enum(['BANK_TRANSFER', 'CASH', 'CARD', 'OTHER'])).optional(),
   note: z.string().nullable().optional(),
 })
 
@@ -75,4 +76,5 @@ export const createCOCashSchema = z.object({
   name: z.string().min(1),
   opening_balance: z.number(),
   opening_balance_date: z.string().date(),
+  allowed_payments: z.array(z.enum(['BANK_TRANSFER', 'CASH', 'CARD', 'OTHER'])).optional(),
 })

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
+import { FilterSelect } from '@/components/finance/FilterSelect'
 import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
 import type { Expense, DocumentType, PaymentMethod, ExpenseStatus } from '@/types/finance'
 
@@ -11,6 +12,8 @@ export type ExpenseWithJoins = Expense & {
   properties: { name: string }
   usali_accounts: { code: string; name: string } | null
   suppliers: { name: string } | null
+  bank_accounts: { name: string } | null
+  co_cash: { name: string } | null
 }
 
 const documentTypeLabels: Record<DocumentType, string> = {
@@ -63,24 +66,31 @@ function toDateString(d: Date): string {
 interface NewRowState {
   issue_date: string
   property_id: string
-
   account_id: string
   supplier_id: string
   document_type: string
   amount_net: string
   vat_amount: string
   payment_method: string
+  payment_source_id: string
 }
 
 interface NewRowErrors {
   issue_date?: boolean
   property_id?: boolean
-
   account_id?: boolean
   supplier_id?: boolean
   document_type?: boolean
   amount_net?: boolean
   payment_method?: boolean
+  payment_source_id?: boolean
+}
+
+type PaymentSource = {
+  id: string
+  name: string
+  type: 'bank' | 'cash'
+  allowed_payments: string[]
 }
 
 interface Props {
@@ -88,6 +98,8 @@ interface Props {
   properties: Array<{ id: string; name: string }>
   accounts: Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>
   suppliers: Array<{ id: string; name: string; eik: string | null }>
+  bankAccounts: Array<{ id: string; name: string; iban: string; allowed_payments: string[] }>
+  coCash: Array<{ id: string; name: string; allowed_payments: string[] }>
   userRole: string
   defaultPropertyId?: string
 }
@@ -97,16 +109,17 @@ export function ExpenseSpreadsheet({
   properties,
   accounts,
   suppliers,
+  bankAccounts,
+  coCash,
   userRole,
   defaultPropertyId,
 }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
 
-  const canCreate = userRole === 'MANAGER' || userRole === 'ADMIN_CO'
+  const canCreate = userRole === 'MANAGER' || userRole === 'ADMIN_CO' || userRole === 'FINANCE_CO'
   const isCO = userRole === 'ADMIN_CO' || userRole === 'FINANCE_CO'
-
-  const [expenses, setExpenses] = useState<ExpenseWithJoins[]>(initialExpenses)
+  const [expenses, setExpenses] = useState<ExpenseWithJoins[]>(initialExpenses ?? [])
   const [newRow, setNewRow] = useState<NewRowState>({
     issue_date: today,
     property_id: defaultPropertyId ?? properties[0]?.id ?? '',
@@ -116,7 +129,17 @@ export function ExpenseSpreadsheet({
     amount_net: '',
     vat_amount: '',
     payment_method: '',
+    payment_source_id: '',
   })
+
+  // Build payment sources filtered by selected payment method
+  const allSources: PaymentSource[] = [
+    ...bankAccounts.map(ba => ({ id: ba.id, name: `🏦 ${ba.name}`, type: 'bank' as const, allowed_payments: ba.allowed_payments ?? [] })),
+    ...coCash.map(c => ({ id: c.id, name: `💰 ${c.name}`, type: 'cash' as const, allowed_payments: c.allowed_payments ?? [] })),
+  ]
+  const filteredSources = newRow.payment_method
+    ? allSources.filter(s => s.allowed_payments.length === 0 || s.allowed_payments.includes(newRow.payment_method))
+    : allSources
   const [errors, setErrors] = useState<NewRowErrors>({})
   const [saveError, setSaveError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -125,6 +148,8 @@ export function ExpenseSpreadsheet({
   function setField<K extends keyof NewRowState>(key: K, value: NewRowState[K]) {
     setNewRow((prev) => {
       const updated = { ...prev, [key]: value }
+      // Reset payment source when payment method changes
+      if (key === 'payment_method') updated.payment_source_id = ''
       return updated
     })
     setErrors((prev) => ({ ...prev, [key]: false }))
@@ -139,6 +164,7 @@ export function ExpenseSpreadsheet({
     if (!newRow.document_type) errs.document_type = true
     if (!newRow.amount_net || parseFloat(newRow.amount_net) <= 0) errs.amount_net = true
     if (!newRow.payment_method) errs.payment_method = true
+    if (!newRow.payment_source_id) errs.payment_source_id = true
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -151,6 +177,7 @@ export function ExpenseSpreadsheet({
     const amountNet = parseFloat(newRow.amount_net) || 0
     const vatAmount = parseFloat(newRow.vat_amount) || 0
 
+    const selectedSource = allSources.find(s => s.id === newRow.payment_source_id)
     const body = {
       property_id: newRow.property_id || defaultPropertyId,
       account_id: newRow.account_id,
@@ -161,6 +188,8 @@ export function ExpenseSpreadsheet({
       amount_net: amountNet,
       vat_amount: vatAmount,
       payment_method: newRow.payment_method,
+      bank_account_id: selectedSource?.type === 'bank' ? selectedSource.id : null,
+      co_cash_id: selectedSource?.type === 'cash' ? selectedSource.id : null,
     }
 
     try {
@@ -199,11 +228,17 @@ export function ExpenseSpreadsheet({
       // Optimistically add new row to the table
       const property = properties.find((p) => p.id === (newRow.property_id || defaultPropertyId))
       const supplier = suppliers.find(s => s.id === newRow.supplier_id)
+      const account = accounts.find(a => a.id === newRow.account_id)
+      const bankAccount = selectedSource?.type === 'bank' ? bankAccounts.find(ba => ba.id === selectedSource.id) : null
+      const coCashItem = selectedSource?.type === 'cash' ? coCash.find(c => c.id === selectedSource.id) : null
       const optimistic: ExpenseWithJoins = {
         ...saved,
         departments: null,
         properties: { name: property?.name ?? '' },
         suppliers: supplier ? { name: supplier.name } : null,
+        usali_accounts: account ? { code: account.code, name: account.name } : null,
+        bank_accounts: bankAccount ? { name: bankAccount.name } : null,
+        co_cash: coCashItem ? { name: coCashItem.name } : null,
       }
       setExpenses((prev) => [optimistic, ...prev])
 
@@ -217,6 +252,7 @@ export function ExpenseSpreadsheet({
         amount_net: '',
         vat_amount: '',
         payment_method: '',
+        payment_source_id: '',
       })
 
       router.refresh()
@@ -254,14 +290,130 @@ export function ExpenseSpreadsheet({
               <th className="px-2 py-1.5 text-right font-medium text-muted-foreground whitespace-nowrap">ДДС</th>
               <th className="px-2 py-1.5 text-right font-medium text-muted-foreground whitespace-nowrap">Общо</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Плащане</th>
+              <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Източник</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Статус</th>
             </tr>
           </thead>
           <tbody>
+            {/* New row — at top */}
+            {canCreate && (
+              <tr className="border-b border-border bg-primary/5">
+                <td className="px-1 py-1">
+                  <input
+                    type="date"
+                    value={newRow.issue_date}
+                    onChange={(e) => setField('issue_date', e.target.value)}
+                    className={errors.issue_date ? inputErrorClass : inputClass}
+                  />
+                </td>
+                {isCO && (
+                  <td className="px-1 py-1 min-w-[110px]">
+                    <FilterSelect
+                      value={newRow.property_id}
+                      onChange={(v) => setField('property_id', v)}
+                      options={properties.map(p => ({ value: p.id, label: p.name }))}
+                      placeholder="Обект"
+                      error={errors.property_id}
+                    />
+                  </td>
+                )}
+                <td className="px-1 py-1 min-w-[110px]">
+                  <FilterSelect
+                    value={newRow.account_id}
+                    onChange={(v) => setField('account_id', v)}
+                    options={accounts
+                      .filter(a => a.account_type === 'EXPENSE' && a.level === 3 && !isHidden(a.id))
+                      .map(a => ({ value: a.id, label: a.name }))}
+                    placeholder="Сметка..."
+                    error={errors.account_id}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[120px]">
+                  <FilterSelect
+                    value={newRow.supplier_id}
+                    onChange={(v) => setField('supplier_id', v)}
+                    options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                    placeholder="Доставчик..."
+                    error={errors.supplier_id}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[110px]">
+                  <FilterSelect
+                    value={newRow.document_type}
+                    onChange={(v) => setField('document_type', v)}
+                    options={(Object.keys(documentTypeLabels) as DocumentType[]).map(k => ({ value: k, label: documentTypeLabels[k] }))}
+                    placeholder="Документ"
+                    error={errors.document_type}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[80px]">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="0.00"
+                    value={newRow.amount_net}
+                    onChange={(e) => setField('amount_net', e.target.value)}
+                    className={`${errors.amount_net ? inputErrorClass : inputClass} text-right`}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[70px]">
+                  <input
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    placeholder="0.00"
+                    value={newRow.vat_amount}
+                    onChange={(e) => setField('vat_amount', e.target.value)}
+                    className={`${inputClass} text-right`}
+                  />
+                </td>
+                <td className="px-2 py-1 text-right font-mono text-muted-foreground whitespace-nowrap">
+                  {((parseFloat(newRow.amount_net) || 0) + (parseFloat(newRow.vat_amount) || 0)).toFixed(2)}
+                </td>
+                <td className="px-1 py-1 min-w-[90px]">
+                  <FilterSelect
+                    value={newRow.payment_method}
+                    onChange={(v) => setField('payment_method', v)}
+                    options={(Object.keys(paymentMethodLabels) as PaymentMethod[]).map(k => ({ value: k, label: paymentMethodLabels[k] }))}
+                    placeholder="Плащане"
+                    error={errors.payment_method}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[120px]">
+                  <FilterSelect
+                    value={newRow.payment_source_id}
+                    onChange={(v) => setField('payment_source_id', v)}
+                    options={filteredSources.map(s => ({ value: s.id, label: s.name }))}
+                    placeholder="Каса/Банка..."
+                    error={errors.payment_source_id}
+                  />
+                </td>
+                <td className="px-1 py-1 whitespace-nowrap">
+                  <div className="flex gap-1">
+                    <button
+                      disabled={loading}
+                      onClick={() => handleSave(false)}
+                      className="px-2 py-0.5 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {loading ? '...' : 'Запази'}
+                    </button>
+                    <button
+                      disabled={loading}
+                      onClick={() => handleSave(true)}
+                      className="px-2 py-0.5 text-xs rounded border border-border hover:bg-muted disabled:opacity-50 whitespace-nowrap"
+                    >
+                      {loading ? '...' : 'Изпрати'}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
+
             {expenses.length === 0 && !canCreate && (
               <tr>
                 <td
-                  colSpan={isCO ? 10 : 9}
+                  colSpan={isCO ? 11 : 10}
                   className="px-2 py-8 text-center text-muted-foreground"
                 >
                   Няма разходи
@@ -302,6 +454,9 @@ export function ExpenseSpreadsheet({
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
                   {paymentMethodLabels[expense.payment_method]}
                 </td>
+                <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
+                  {expense.bank_accounts?.name ?? expense.co_cash?.name ?? '—'}
+                </td>
                 <td className="px-2 py-1 whitespace-nowrap">
                   <Badge variant={statusVariants[expense.status]} className="text-[0.65rem] px-1 py-0">
                     {statusLabels[expense.status]}
@@ -309,129 +464,6 @@ export function ExpenseSpreadsheet({
                 </td>
               </tr>
             ))}
-
-            {/* New row */}
-            {canCreate && (
-              <tr className="border-b border-border bg-primary/5">
-                <td className="px-1 py-1">
-                  <input
-                    type="date"
-                    value={newRow.issue_date}
-                    onChange={(e) => setField('issue_date', e.target.value)}
-                    className={errors.issue_date ? inputErrorClass : inputClass}
-                  />
-                </td>
-                {isCO && (
-                  <td className="px-1 py-1 min-w-[110px]">
-                    <select
-                      value={newRow.property_id}
-                      onChange={(e) => setField('property_id', e.target.value)}
-                      className={errors.property_id ? inputErrorClass : selectClass}
-                    >
-                      <option value="">Обект</option>
-                      {properties.map((p) => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </td>
-                )}
-                <td className="px-1 py-1 min-w-[110px]">
-                  <select
-                    value={newRow.account_id}
-                    onChange={e => setField('account_id', e.target.value)}
-                    className="w-full bg-transparent text-xs border-0 focus:ring-1 focus:ring-primary px-1 py-0.5 [&_option]:bg-zinc-900 [&_option]:text-zinc-100"
-                  >
-                    <option value="">Сметка...</option>
-                    {accounts
-                      .filter(a => a.account_type === 'EXPENSE' && a.level === 3 && !isHidden(a.id))
-                      .map(a => (
-                        <option key={a.id} value={a.id}>
-                          {a.name}
-                        </option>
-                      ))}
-                  </select>
-                </td>
-                <td className="px-1 py-1 min-w-[120px]">
-                  <select
-                    value={newRow.supplier_id}
-                    onChange={(e) => setField('supplier_id', e.target.value)}
-                    className={errors.supplier_id ? inputErrorClass : selectClass}
-                  >
-                    <option value="">Доставчик...</option>
-                    {suppliers.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-1 py-1 min-w-[110px]">
-                  <select
-                    value={newRow.document_type}
-                    onChange={(e) => setField('document_type', e.target.value)}
-                    className={errors.document_type ? inputErrorClass : selectClass}
-                  >
-                    <option value="">Документ</option>
-                    {(Object.keys(documentTypeLabels) as DocumentType[]).map((k) => (
-                      <option key={k} value={k}>{documentTypeLabels[k]}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-1 py-1 min-w-[80px]">
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="0.00"
-                    value={newRow.amount_net}
-                    onChange={(e) => setField('amount_net', e.target.value)}
-                    className={`${errors.amount_net ? inputErrorClass : inputClass} text-right`}
-                  />
-                </td>
-                <td className="px-1 py-1 min-w-[70px]">
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="0.00"
-                    value={newRow.vat_amount}
-                    onChange={(e) => setField('vat_amount', e.target.value)}
-                    className={`${inputClass} text-right`}
-                  />
-                </td>
-                <td className="px-2 py-1 text-right font-mono text-muted-foreground whitespace-nowrap">
-                  {((parseFloat(newRow.amount_net) || 0) + (parseFloat(newRow.vat_amount) || 0)).toFixed(2)}
-                </td>
-                <td className="px-1 py-1 min-w-[90px]">
-                  <select
-                    value={newRow.payment_method}
-                    onChange={(e) => setField('payment_method', e.target.value)}
-                    className={errors.payment_method ? inputErrorClass : selectClass}
-                  >
-                    <option value="">Плащане</option>
-                    {(Object.keys(paymentMethodLabels) as PaymentMethod[]).map((k) => (
-                      <option key={k} value={k}>{paymentMethodLabels[k]}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-1 py-1 whitespace-nowrap">
-                  <div className="flex gap-1">
-                    <button
-                      disabled={loading}
-                      onClick={() => handleSave(false)}
-                      className="px-2 py-0.5 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 whitespace-nowrap"
-                    >
-                      {loading ? '...' : 'Запази'}
-                    </button>
-                    <button
-                      disabled={loading}
-                      onClick={() => handleSave(true)}
-                      className="px-2 py-0.5 text-xs rounded border border-border hover:bg-muted disabled:opacity-50 whitespace-nowrap"
-                    >
-                      {loading ? '...' : 'Изпрати'}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )}
 
             {/* Totals row */}
             {expenses.length > 0 && (
@@ -451,7 +483,7 @@ export function ExpenseSpreadsheet({
                 <td className="px-2 py-1.5 text-right font-mono text-xs">
                   {totalAmount.toFixed(2)}
                 </td>
-                <td colSpan={2} />
+                <td colSpan={3} />
               </tr>
             )}
           </tbody>

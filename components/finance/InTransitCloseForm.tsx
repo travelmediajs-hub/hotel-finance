@@ -6,23 +6,40 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select'
+
+type DestType = 'BANK_ACCOUNT' | 'CO_CASH' | 'PROPERTY_CASH'
 
 interface Props {
   inTransitId: string
   remainingAmount: number
+  bankAccounts: { id: string; name: string; iban: string }[]
+  coCash: { id: string; name: string }[]
+  properties: { id: string; name: string }[]
 }
 
-export function InTransitCloseForm({ inTransitId, remainingAmount }: Props) {
+const selectCls = 'bg-transparent border border-border rounded px-2 py-1.5 text-sm w-full focus:outline-none focus:ring-1 focus:ring-ring [&_option]:bg-zinc-900 [&_option]:text-zinc-100'
+
+export function InTransitCloseForm({ inTransitId, remainingAmount, bankAccounts, coCash, properties }: Props) {
   const router = useRouter()
 
   const [amount, setAmount] = useState(remainingAmount)
-  const [destinationType, setDestinationType] = useState('')
+  const [destinationType, setDestinationType] = useState<DestType | ''>('')
   const [destinationId, setDestinationId] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  function getDestOptions() {
+    switch (destinationType) {
+      case 'BANK_ACCOUNT':
+        return bankAccounts.map(a => ({ id: a.id, label: `${a.name} (${a.iban})` }))
+      case 'CO_CASH':
+        return coCash.map(c => ({ id: c.id, label: c.name }))
+      case 'PROPERTY_CASH':
+        return properties.map(p => ({ id: p.id, label: p.name }))
+      default:
+        return []
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -33,11 +50,11 @@ export function InTransitCloseForm({ inTransitId, remainingAmount }: Props) {
       return
     }
     if (!destinationType) {
-      setError('Моля, изберете тип дестинация.')
+      setError('Изберете къде отиват парите.')
       return
     }
-    if (!destinationId.trim()) {
-      setError('Моля, въведете ID на дестинацията.')
+    if (!destinationId) {
+      setError('Изберете конкретната дестинация.')
       return
     }
 
@@ -50,7 +67,7 @@ export function InTransitCloseForm({ inTransitId, remainingAmount }: Props) {
         body: JSON.stringify({
           amount,
           destination_type: destinationType,
-          destination_id: destinationId.trim(),
+          destination_id: destinationId,
         }),
       })
 
@@ -68,10 +85,12 @@ export function InTransitCloseForm({ inTransitId, remainingAmount }: Props) {
     }
   }
 
+  const destOptions = getDestOptions()
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Затваряне на стъпка</CardTitle>
+        <CardTitle className="text-base">Приключване (доставяне на пари)</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -81,49 +100,53 @@ export function InTransitCloseForm({ inTransitId, remainingAmount }: Props) {
             </p>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="close_amount">Сума (макс. {remainingAmount.toFixed(2)})</Label>
-              <Input
-                id="close_amount"
-                type="number"
-                min={0.01}
-                max={remainingAmount}
-                step="0.01"
-                value={amount || ''}
-                onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
-                required
-              />
+              <Label>Къде отиват парите *</Label>
+              <select
+                value={destinationType}
+                onChange={e => { setDestinationType(e.target.value as DestType); setDestinationId('') }}
+                className={selectCls}
+              >
+                <option value="">— изберете —</option>
+                <option value="BANK_ACCOUNT">Банкова сметка</option>
+                <option value="CO_CASH">Каса ЦО</option>
+                <option value="PROPERTY_CASH">Каса на обект</option>
+              </select>
             </div>
 
             <div className="space-y-2">
-              <Label>Тип дестинация</Label>
-              <Select value={destinationType} onValueChange={(v) => v && setDestinationType(v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Избери тип" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="BANK_ACCOUNT">Банкова сметка</SelectItem>
-                  <SelectItem value="PROPERTY_CASH">Каса на обект</SelectItem>
-                  <SelectItem value="CO_CASH">Каса ЦО</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="destination_id">ID на дестинация</Label>
-              <Input
-                id="destination_id"
+              <Label>Дестинация *</Label>
+              <select
                 value={destinationId}
-                onChange={(e) => setDestinationId(e.target.value)}
-                placeholder="UUID"
-              />
+                onChange={e => setDestinationId(e.target.value)}
+                className={selectCls}
+                disabled={!destinationType}
+              >
+                <option value="">— изберете —</option>
+                {destOptions.map(o => (
+                  <option key={o.id} value={o.id}>{o.label}</option>
+                ))}
+              </select>
             </div>
+          </div>
+
+          <div className="space-y-2 max-w-xs">
+            <Label>Сума (макс. {remainingAmount.toFixed(2)}) *</Label>
+            <Input
+              type="number"
+              min={0.01}
+              max={remainingAmount}
+              step="0.01"
+              value={amount || ''}
+              onChange={e => setAmount(parseFloat(e.target.value) || 0)}
+              className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
           </div>
 
           <div className="flex gap-3">
             <Button type="submit" disabled={loading} size="sm">
-              {loading ? 'Запис...' : 'Затвори стъпка'}
+              {loading ? 'Запис...' : 'Приключи'}
             </Button>
           </div>
         </form>

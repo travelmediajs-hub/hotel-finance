@@ -150,19 +150,28 @@ export function DailyReportTable({
         const newLines = r.daily_report_lines.map((l) => {
           if (l.department_id !== deptId) return l
           const updated = { ...l, [field]: value }
-          // Recalc local nets
+          // Recalc local nets and diffs
           updated.cash_net = updated.cash_income - updated.cash_refund
           updated.pos_net = updated.pos_income - updated.pos_refund
+          updated.cash_diff = updated.cash_net - updated.z_cash
+          updated.pos_diff = updated.pos_net - updated.pos_report_amount
+          updated.total_diff = updated.cash_diff + updated.pos_diff
           return updated
         })
         // Recalc report totals
         const totalCashNet = newLines.reduce((s, l) => s + l.cash_net, 0)
         const totalPosNet = newLines.reduce((s, l) => s + l.pos_net, 0)
+        const cashDiff = newLines.reduce((s, l) => s + l.cash_diff, 0)
+        const posDiff = newLines.reduce((s, l) => s + l.pos_diff, 0)
+        const totalDiff = newLines.reduce((s, l) => s + l.total_diff, 0)
         return {
           ...r,
           daily_report_lines: newLines,
           total_cash_net: totalCashNet,
           total_pos_net: totalPosNet,
+          cash_diff: cashDiff,
+          pos_diff: posDiff,
+          total_diff: totalDiff,
         }
       })
     )
@@ -414,7 +423,7 @@ export function DailyReportTable({
   // Cell styling: Excel-like, input fills the whole cell
   const cellBase = 'border border-zinc-800 text-right tabular-nums font-mono text-xs'
   const cellPad = 'px-1.5 py-0'
-  const inputClass = 'h-8 w-full bg-transparent border-0 text-right tabular-nums font-mono text-xs px-1.5 py-0 focus:ring-1 focus:ring-primary rounded-none'
+  const inputClass = 'h-8 w-full bg-transparent border-0 text-right tabular-nums font-mono text-xs px-1.5 py-0 focus:ring-1 focus:ring-primary rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
 
   return (
     <>
@@ -465,7 +474,7 @@ export function DailyReportTable({
               {departments.map((dept) => (
                 <th
                   key={dept.id}
-                  colSpan={4}
+                  colSpan={8}
                   className="border border-zinc-800 px-1 py-1.5 text-center font-medium"
                 >
                   {dept.name}
@@ -484,8 +493,12 @@ export function DailyReportTable({
                 <React.Fragment key={dept.id}>
                   <th className={`${cellBase} ${cellPad}`}>К+</th>
                   <th className={`${cellBase} ${cellPad}`}>К-</th>
+                  <th className={`${cellBase} ${cellPad}`}>Z каса</th>
+                  <th className={`${cellBase} ${cellPad}`}>К разл</th>
                   <th className={`${cellBase} ${cellPad}`}>П+</th>
                   <th className={`${cellBase} ${cellPad}`}>П-</th>
+                  <th className={`${cellBase} ${cellPad}`}>ПОС отч</th>
+                  <th className={`${cellBase} ${cellPad}`}>П разл</th>
                 </React.Fragment>
               ))}
               <th className={`${cellBase} ${cellPad}`}>нето</th>
@@ -529,15 +542,20 @@ export function DailyReportTable({
                           <td className={`${cellBase} ${cellPad}`}>—</td>
                           <td className={`${cellBase} ${cellPad}`}>—</td>
                           <td className={`${cellBase} ${cellPad}`}>—</td>
+                          <td className={`${cellBase} ${cellPad}`}>—</td>
+                          <td className={`${cellBase} ${cellPad}`}>—</td>
+                          <td className={`${cellBase} ${cellPad}`}>—</td>
+                          <td className={`${cellBase} ${cellPad}`}>—</td>
                         </React.Fragment>
                       )
                     }
 
                     if (deptEditable) {
-                      const fields = ['cash_income', 'cash_refund', 'pos_income', 'pos_refund'] as const
+                      const cashFields = ['cash_income', 'cash_refund'] as const
+                      const posFields = ['pos_income', 'pos_refund'] as const
                       return (
                         <React.Fragment key={dept.id}>
-                          {fields.map((field) => (
+                          {cashFields.map((field) => (
                             <td key={field} className="border border-zinc-800 p-0">
                               <input
                                 type="number"
@@ -545,18 +563,58 @@ export function DailyReportTable({
                                 step="0.01"
                                 value={Number(line[field]) || ''}
                                 onChange={(e) => {
-                                  updateLocalLine(
-                                    report.id,
-                                    dept.id,
-                                    field,
-                                    parseFloat(e.target.value) || 0
-                                  )
+                                  updateLocalLine(report.id, dept.id, field, parseFloat(e.target.value) || 0)
                                 }}
                                 onBlur={() => handleCellBlur(report.id, dept.id)}
                                 className={inputClass}
                               />
                             </td>
                           ))}
+                          <td className="border border-zinc-800 p-0">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={Number(line.z_cash) || ''}
+                              onChange={(e) => {
+                                updateLocalLine(report.id, dept.id, 'z_cash', parseFloat(e.target.value) || 0)
+                              }}
+                              onBlur={() => handleCellBlur(report.id, dept.id)}
+                              className={inputClass}
+                            />
+                          </td>
+                          <td className={`${cellBase} ${cellPad} ${diffColor(Number(line.cash_diff))}`}>
+                            {fmt(Number(line.cash_diff))}
+                          </td>
+                          {posFields.map((field) => (
+                            <td key={field} className="border border-zinc-800 p-0">
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={Number(line[field]) || ''}
+                                onChange={(e) => {
+                                  updateLocalLine(report.id, dept.id, field, parseFloat(e.target.value) || 0)
+                                }}
+                                onBlur={() => handleCellBlur(report.id, dept.id)}
+                                className={inputClass}
+                              />
+                            </td>
+                          ))}
+                          <td className="border border-zinc-800 p-0">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={Number(line.pos_report_amount) || ''}
+                              onChange={(e) => {
+                                updateLocalLine(report.id, dept.id, 'pos_report_amount', parseFloat(e.target.value) || 0)
+                              }}
+                              onBlur={() => handleCellBlur(report.id, dept.id)}
+                              className={inputClass}
+                            />
+                          </td>
+                          <td className={`${cellBase} ${cellPad} ${diffColor(Number(line.pos_diff))}`}>
+                            {fmt(Number(line.pos_diff))}
+                          </td>
                         </React.Fragment>
                       )
                     }
@@ -566,8 +624,12 @@ export function DailyReportTable({
                       <React.Fragment key={dept.id}>
                         <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.cash_income))}</td>
                         <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.cash_refund))}</td>
+                        <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.z_cash))}</td>
+                        <td className={`${cellBase} ${cellPad} ${diffColor(Number(line.cash_diff))}`}>{fmt(Number(line.cash_diff))}</td>
                         <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.pos_income))}</td>
                         <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.pos_refund))}</td>
+                        <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.pos_report_amount))}</td>
+                        <td className={`${cellBase} ${cellPad} ${diffColor(Number(line.pos_diff))}`}>{fmt(Number(line.pos_diff))}</td>
                       </React.Fragment>
                     )
                   })}
