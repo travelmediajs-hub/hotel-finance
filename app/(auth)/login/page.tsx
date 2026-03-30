@@ -28,7 +28,7 @@ export default function LoginPage() {
       return
     }
 
-    router.push('/chat')
+    router.push('/finance/dashboard')
     router.refresh()
   }
 
