@@ -72,7 +72,7 @@ export function DepartmentForm({ propertyId, department, fiscalDevices, posTermi
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      <DialogTrigger>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Редактиране на точка' : 'Нова точка на продажба'}</DialogTitle>
