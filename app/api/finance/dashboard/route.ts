@@ -80,12 +80,12 @@ export async function GET() {
       .from('revolving_credit_balances')
       .select('id, used_amount, available_limit'),
 
-    // 10. Pending expenses (SENT_TO_CO)
+    // 10. Unpaid/partial expenses
     supabase
       .from('expenses')
-      .select('id, supplier, total_amount, due_date, properties(name)')
-      .eq('status', 'SENT_TO_CO')
-      .order('due_date', { ascending: true }),
+      .select('id, total_amount, paid_amount, supplier_id, suppliers(name), properties(name)')
+      .in('status', ['UNPAID', 'PARTIAL'])
+      .order('issue_date', { ascending: false }),
 
     // 11. Daily reports count (pending)
     supabase
@@ -217,14 +217,30 @@ export async function GET() {
     }
   })
 
-  // --- Pending expenses ---
-  const pending_expenses = (pendingExpensesResult.data ?? []).map((exp) => ({
-    id: exp.id,
-    supplier: exp.supplier,
-    total_amount: exp.total_amount,
-    due_date: exp.due_date,
-    property_name: ((exp.properties as unknown as { name: string }) ?? { name: '' }).name,
-  }))
+  // --- Unpaid expenses grouped by supplier ---
+  const unpaidRaw = pendingExpensesResult.data ?? []
+  const supplierMap = new Map<string, { name: string; remaining: number; count: number }>()
+  let unpaidTotal = 0
+  for (const exp of unpaidRaw) {
+    const remaining = (exp.total_amount as number) - ((exp.paid_amount as number) ?? 0)
+    unpaidTotal += remaining
+    const supplierName = ((exp.suppliers as unknown as { name: string }) ?? { name: 'Без доставчик' }).name
+    const key = exp.supplier_id ?? '__none__'
+    const existing = supplierMap.get(key)
+    if (existing) {
+      existing.remaining += remaining
+      existing.count += 1
+    } else {
+      supplierMap.set(key, { name: supplierName, remaining, count: 1 })
+    }
+  }
+  const unpaid_by_supplier = Array.from(supplierMap.values())
+    .sort((a, b) => b.remaining - a.remaining)
+  const unpaid_expenses = {
+    total: Math.round(unpaidTotal * 100) / 100,
+    count: unpaidRaw.length,
+    by_supplier: unpaid_by_supplier,
+  }
 
   // --- Pending reports counts ---
   const pending_reports = {
@@ -268,7 +284,7 @@ export async function GET() {
 
   // --- Net cash position ---
   const totalBankBalance = bank_accounts.reduce((s, a) => s + a.current_balance, 0)
-  const totalPendingExpenses = pending_expenses.reduce((s, e) => s + e.total_amount, 0)
+  const totalPendingExpenses = unpaid_expenses.total
   const totalUpcomingLoanPayments = upcoming_loan_payments.reduce((s, p) => s + p.amount, 0)
 
   const net_cash_position =
@@ -282,7 +298,7 @@ export async function GET() {
     co_cash,
     loans,
     revolving_credits,
-    pending_expenses,
+    unpaid_expenses,
     pending_reports,
     unconfirmed_collections,
     unaccounted_advances,

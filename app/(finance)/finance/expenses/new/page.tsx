@@ -90,6 +90,7 @@ export default async function NewExpensePage({ searchParams }: Props) {
         propertyId={propertyId}
         accounts={(accountsResult.data ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>}
         suppliers={(suppliersResult.data ?? []) as Array<{ id: string; name: string; eik: string | null; vat_number: string | null }>}
+        userRole={user.role}
       />
     </div>
   )

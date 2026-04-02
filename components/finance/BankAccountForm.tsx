@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -150,7 +151,7 @@ export function BankAccountForm({ trigger }: Props) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="ba-date">Дата на начално салдо *</Label>
-              <Input id="ba-date" name="opening_balance_date" type="date" required />
+              <DateInput id="ba-date" name="opening_balance_date" required />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Видове плащания *</Label>

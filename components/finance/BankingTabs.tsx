@@ -13,6 +13,7 @@ import { BankTransactionForm } from './BankTransactionForm'
 import { LoanForm } from './LoanForm'
 import { RevolvingForm } from './RevolvingForm'
 import { COCashForm } from './COCashForm'
+import { fmtDate } from '@/lib/utils'
 import type {
   BankAccount,
   BankAccountBalance,
@@ -231,7 +232,7 @@ export function BankingTabs({
                 )}
                 {transactions.map(tx => (
                   <TableRow key={tx.id}>
-                    <TableCell>{tx.transaction_date}</TableCell>
+                    <TableCell>{fmtDate(tx.transaction_date)}</TableCell>
                     <TableCell>{tx.bank_accounts?.name}</TableCell>
                     <TableCell>{txTypeLabels[tx.type] ?? tx.type}</TableCell>
                     <TableCell>{tx.counterparty}</TableCell>

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { FilterSelect } from '@/components/finance/FilterSelect'
 import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
+import { DateInput } from '@/components/ui/date-input'
+import { fmtDate } from '@/lib/utils'
 import type {
   IncomeEntry,
   IncomeEntryType,
@@ -227,8 +229,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
             {canCreate && (
               <tr className="bg-primary/5 border-b border-border">
                 <td className="px-1 py-1">
-                  <input
-                    type="date"
+                  <DateInput
                     value={entryDate}
                     onChange={(e) => setEntryDate(e.target.value)}
                     className={fieldErrors.entryDate ? inputErrCls : inputCls}
@@ -331,7 +332,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
                 className="border-b border-border/50 hover:bg-muted/40 cursor-pointer transition-colors"
                 onClick={() => router.push(`/finance/income/${entry.id}`)}
               >
-                <td className="px-2 py-1 font-mono whitespace-nowrap">{entry.entry_date}</td>
+                <td className="px-2 py-1 font-mono whitespace-nowrap">{fmtDate(entry.entry_date)}</td>
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap max-w-[140px] truncate">
                   {entry.properties.name}
                 </td>

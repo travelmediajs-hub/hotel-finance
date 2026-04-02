@@ -4,13 +4,14 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
-import type { DocumentType, PaymentMethod } from '@/types/finance'
+import type { DocumentType, PaymentMethod, UserRole } from '@/types/finance'
 import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
 import { Plus } from 'lucide-react'
 
@@ -48,13 +49,15 @@ interface Props {
   propertyId: string
   accounts: UsaliAccount[]
   suppliers?: SupplierOption[]
+  userRole: UserRole
 }
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers }: Props) {
+export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers, userRole }: Props) {
+  const isManager = userRole === 'MANAGER'
   const router = useRouter()
   const today = toDateString(new Date())
   const { isHidden } = useHiddenAccounts(propertyId)
@@ -73,6 +76,7 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers 
   const [issueDate, setIssueDate] = useState(today)
   const [dueDate, setDueDate] = useState(today)
   const [amountNet, setAmountNet] = useState(0)
+  const [hasVat, setHasVat] = useState(false)
   const [vatAmount, setVatAmount] = useState(0)
   const [paymentMethod, setPaymentMethod] = useState('')
   const [attachmentUrl, setAttachmentUrl] = useState('')
@@ -158,7 +162,7 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers 
 
     setLoading(true)
 
-    const body = {
+    const body: Record<string, unknown> = {
       property_id: propertyId,
       account_id: accountId,
       supplier_id: supplierId,
@@ -173,6 +177,12 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers 
       payment_method: paymentMethod,
       attachment_url: attachmentUrl || null,
       note: note || null,
+    }
+
+    // Manager paying cash: mark as paid from property cash register
+    if (isManager && paymentMethod === 'CASH') {
+      body.paid_from_cash = 'property'
+      body.mark_paid = true
     }
 
     try {
@@ -338,18 +348,16 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers 
             </div>
             <div className="space-y-2">
               <Label htmlFor="issue_date">Дата на издаване *</Label>
-              <Input
+              <DateInput
                 id="issue_date"
-                type="date"
                 value={issueDate}
                 onChange={(e) => setIssueDate(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="due_date">Падеж *</Label>
-              <Input
+              <DateInput
                 id="due_date"
-                type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
               />
@@ -373,11 +381,34 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers 
                 min={0}
                 step="0.01"
                 value={amountNet || ''}
-                onChange={(e) => setAmountNet(parseFloat(e.target.value) || 0)}
+                onChange={(e) => {
+                  const net = parseFloat(e.target.value) || 0
+                  setAmountNet(net)
+                  if (hasVat) setVatAmount(Math.round(net * 20) / 100)
+                }}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="vat_amount">ДДС</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="vat_amount">ДДС</Label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={hasVat}
+                    onChange={(e) => {
+                      const checked = e.target.checked
+                      setHasVat(checked)
+                      if (checked) {
+                        setVatAmount(Math.round(amountNet * 20) / 100)
+                      } else {
+                        setVatAmount(0)
+                      }
+                    }}
+                    className="h-3.5 w-3.5 rounded border-border accent-primary"
+                  />
+                  <span className="text-xs text-muted-foreground">ДДС 20%</span>
+                </label>
+              </div>
               <Input
                 id="vat_amount"
                 type="number"
@@ -385,6 +416,8 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers 
                 step="0.01"
                 value={vatAmount || ''}
                 onChange={(e) => setVatAmount(parseFloat(e.target.value) || 0)}
+                disabled={hasVat}
+                className={hasVat ? 'font-mono bg-muted' : ''}
               />
             </div>
             <div className="space-y-2">
@@ -408,16 +441,34 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Начин на плащане *</Label>
-              <Select value={paymentMethod} onValueChange={(v) => v && setPaymentMethod(v)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Избери начин" />
-                </SelectTrigger>
-                <SelectContent>
-                  {paymentMethodOptions.map(o => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {isManager ? (
+                <Select value={paymentMethod} onValueChange={(v) => v && setPaymentMethod(v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Избери начин" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CASH">В брой</SelectItem>
+                    <SelectItem value="BANK_TRANSFER">Банков превод</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Select value={paymentMethod} onValueChange={(v) => v && setPaymentMethod(v)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Избери начин" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {paymentMethodOptions.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {isManager && paymentMethod === 'CASH' && (
+                <p className="text-xs text-green-500">Ще бъде платено от касата на обекта</p>
+              )}
+              {isManager && paymentMethod === 'BANK_TRANSFER' && (
+                <p className="text-xs text-muted-foreground">Ще бъде изпратено към ЦО за плащане</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="attachment_url">Прикачен файл (URL)</Label>

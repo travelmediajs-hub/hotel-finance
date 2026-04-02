@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -108,9 +109,8 @@ export function ConsolidationNewForm({ propertyId, propertyName, date: initialDa
         <CardContent className="space-y-4">
           <div className="max-w-xs space-y-2">
             <Label htmlFor="consolidation_date">Дата</Label>
-            <Input
+            <DateInput
               id="consolidation_date"
-              type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />

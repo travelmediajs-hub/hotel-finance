@@ -13,7 +13,7 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { name, eik, vat_number, contact_person, phone, email, is_active } = body
+  const { name, eik, vat_number, contact_person, phone, email, address, iban, notes, is_active } = body
 
   if (name !== undefined && !name?.trim()) {
     return NextResponse.json({ error: 'Името е задължително' }, { status: 400 })
@@ -26,6 +26,9 @@ export async function PATCH(
   if (contact_person !== undefined) updates.contact_person = contact_person?.trim() || null
   if (phone !== undefined) updates.phone = phone?.trim() || null
   if (email !== undefined) updates.email = email?.trim() || null
+  if (address !== undefined) updates.address = address?.trim() || null
+  if (iban !== undefined) updates.iban = iban?.trim() || null
+  if (notes !== undefined) updates.notes = notes?.trim() || null
   if (is_active !== undefined) updates.is_active = is_active
 
   const supabase = await createClient()

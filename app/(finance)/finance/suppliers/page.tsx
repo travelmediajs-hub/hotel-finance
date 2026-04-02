@@ -11,10 +11,10 @@ export default async function SuppliersPage() {
   const supabase = await createClient()
   const { data: suppliers } = await supabase
     .from('suppliers')
-    .select('id, name, eik, vat_number, contact_person, phone, email, is_active')
+    .select('id, name, eik, vat_number, contact_person, phone, email, address, iban, notes, is_active')
     .order('name')
 
-  const canManage = user.role === 'ADMIN_CO' || user.role === 'FINANCE_CO'
+  const canManage = user.role === 'ADMIN_CO' || user.role === 'FINANCE_CO' || user.role === 'MANAGER'
 
   return (
     <div className="p-6 max-w-[1200px] mx-auto">

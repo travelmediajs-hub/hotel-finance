@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -206,7 +207,7 @@ export function PropertyForm({ property }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="active_since">Активен от *</Label>
-              <Input id="active_since" name="active_since" type="date" required
+              <DateInput id="active_since" name="active_since" required
                 defaultValue={property?.active_since ?? ''} />
             </div>
 

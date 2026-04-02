@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -192,9 +193,8 @@ export function WithdrawalActions({ withdrawal, userRole }: Props) {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="accounted_date">Дата на отчитане</Label>
-                <Input
+                <DateInput
                   id="accounted_date"
-                  type="date"
                   value={accountedDate}
                   onChange={(e) => setAccountedDate(e.target.value)}
                 />

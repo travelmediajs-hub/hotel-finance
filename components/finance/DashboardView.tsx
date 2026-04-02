@@ -8,6 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { Separator } from '@/components/ui/separator'
+import { fmtDate } from '@/lib/utils'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,12 +54,16 @@ interface RevolvingCredit {
   status: string
 }
 
-interface PendingExpense {
-  id: string
-  supplier: string
-  total_amount: number
-  due_date: string | null
-  property_name: string
+interface UnpaidBySupplier {
+  name: string
+  remaining: number
+  count: number
+}
+
+interface UnpaidExpenses {
+  total: number
+  count: number
+  by_supplier: UnpaidBySupplier[]
 }
 
 interface PendingReports {
@@ -94,7 +99,7 @@ interface DashboardData {
   co_cash: COCash
   loans: Loan[]
   revolving_credits: RevolvingCredit[]
-  pending_expenses: PendingExpense[]
+  unpaid_expenses: UnpaidExpenses
   pending_reports: PendingReports
   unconfirmed_collections: UnconfirmedCollection[]
   unaccounted_advances: UnaccountedAdvance[]
@@ -146,6 +151,7 @@ export function DashboardView() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [unpaidOpen, setUnpaidOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/finance/dashboard')
@@ -179,7 +185,7 @@ export function DashboardView() {
     co_cash: rawCoCash,
     loans,
     revolving_credits,
-    pending_expenses,
+    unpaid_expenses,
     pending_reports,
     unconfirmed_collections,
     unaccounted_advances,
@@ -336,7 +342,7 @@ export function DashboardView() {
                     <span className={`font-semibold ${getDaysColor(loan.days_until_payment)}`}>
                       {loan.days_until_payment}
                     </span>
-                    <span className="text-muted-foreground ml-1">({loan.next_payment_date})</span>
+                    <span className="text-muted-foreground ml-1">({fmtDate(loan.next_payment_date)})</span>
                   </div>
                 </div>
               ))}
@@ -382,46 +388,53 @@ export function DashboardView() {
         )}
       </div>
 
-      {/* ── Pending Expenses ─────────────────────────────── */}
-      {pending_expenses.length > 0 && (
+      {/* ── Unpaid Expenses ─────────────────────────────── */}
+      {unpaid_expenses.count > 0 && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">
-              Чакащи за плащане
-              <Badge variant="destructive" className="ml-2 text-xs">{pending_expenses.length}</Badge>
-            </CardTitle>
+            <button
+              type="button"
+              className="w-full flex items-center justify-between text-left"
+              onClick={() => setUnpaidOpen(o => !o)}
+            >
+              <CardTitle className="text-sm font-semibold">
+                Неплатени разходи
+                <Badge variant="destructive" className="ml-2 text-xs">{unpaid_expenses.count}</Badge>
+              </CardTitle>
+              <div className="flex items-center gap-3">
+                <span className="font-mono font-semibold text-red-400">{formatAmount(unpaid_expenses.total)}</span>
+                <svg
+                  className={`h-4 w-4 text-muted-foreground transition-transform ${unpaidOpen ? 'rotate-180' : ''}`}
+                  xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </div>
+            </button>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Доставчик</TableHead>
-                  <TableHead>Обект</TableHead>
-                  <TableHead className="text-right">Сума</TableHead>
-                  <TableHead>Срок</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pending_expenses.map(exp => (
-                  <TableRow key={exp.id}>
-                    <TableCell>
-                      <Link
-                        href={`/finance/expenses/${exp.id}`}
-                        className="text-foreground hover:underline font-medium"
-                      >
-                        {exp.supplier}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{exp.property_name}</TableCell>
-                    <TableCell className="text-right font-mono">{formatAmount(exp.total_amount)}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {exp.due_date ?? '—'}
-                    </TableCell>
+          {unpaidOpen && (
+            <CardContent className="pt-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Доставчик</TableHead>
+                    <TableHead className="text-right">Брой</TableHead>
+                    <TableHead className="text-right">Остатък</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
+                </TableHeader>
+                <TableBody>
+                  {unpaid_expenses.by_supplier.map(s => (
+                    <TableRow key={s.name}>
+                      <TableCell className="font-medium">{s.name}</TableCell>
+                      <TableCell className="text-right text-muted-foreground">{s.count}</TableCell>
+                      <TableCell className="text-right font-mono text-red-400">{formatAmount(s.remaining)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          )}
         </Card>
       )}
 
@@ -442,7 +455,7 @@ export function DashboardView() {
                 <div key={col.id} className="flex items-center justify-between text-sm">
                   <div>
                     <p className="font-medium text-foreground">{col.property_name}</p>
-                    <p className="text-xs text-muted-foreground">{col.collection_date}</p>
+                    <p className="text-xs text-muted-foreground">{fmtDate(col.collection_date)}</p>
                   </div>
                   <span className="font-mono font-medium text-yellow-400">{formatAmount(col.amount)}</span>
                 </div>
@@ -473,7 +486,7 @@ export function DashboardView() {
                   <div>
                     <p className="font-medium text-foreground">{adv.property_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {adv.sent_date}{adv.purpose ? ` — ${adv.purpose}` : ''}
+                      {fmtDate(adv.sent_date)}{adv.purpose ? ` — ${adv.purpose}` : ''}
                     </p>
                   </div>
                   <span className="font-mono font-medium text-orange-400">{formatAmount(adv.amount)}</span>
@@ -515,7 +528,7 @@ export function DashboardView() {
                   <TableRow key={p.loan_id}>
                     <TableCell className="font-medium">{p.bank}</TableCell>
                     <TableCell className="text-right font-mono">{formatAmount(p.amount)}</TableCell>
-                    <TableCell className="text-muted-foreground">{p.payment_date}</TableCell>
+                    <TableCell className="text-muted-foreground">{fmtDate(p.payment_date)}</TableCell>
                     <TableCell>
                       <span className={`font-semibold ${getDaysColor(p.days_until)}`}>
                         {p.days_until}

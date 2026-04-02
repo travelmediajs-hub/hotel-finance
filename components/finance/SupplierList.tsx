@@ -19,6 +19,9 @@ interface Supplier {
   contact_person: string | null
   phone: string | null
   email: string | null
+  address: string | null
+  iban: string | null
+  notes: string | null
   is_active: boolean
 }
 
@@ -34,6 +37,9 @@ const emptyForm = {
   contact_person: '',
   phone: '',
   email: '',
+  address: '',
+  iban: '',
+  notes: '',
 }
 
 export function SupplierList({ suppliers: initial, canManage }: Props) {
@@ -69,6 +75,9 @@ export function SupplierList({ suppliers: initial, canManage }: Props) {
       contact_person: s.contact_person ?? '',
       phone: s.phone ?? '',
       email: s.email ?? '',
+      address: s.address ?? '',
+      iban: s.iban ?? '',
+      notes: s.notes ?? '',
     })
     setError(null)
     setDrawerOpen(true)
@@ -90,6 +99,9 @@ export function SupplierList({ suppliers: initial, canManage }: Props) {
         contact_person: form.contact_person || null,
         phone: form.phone || null,
         email: form.email || null,
+        address: form.address || null,
+        iban: form.iban || null,
+        notes: form.notes || null,
       }
 
       if (editId) {
@@ -206,7 +218,7 @@ export function SupplierList({ suppliers: initial, canManage }: Props) {
                   <td className="px-3 py-2 text-center">
                     <button
                       onClick={() => openEdit(s)}
-                      className="p-1 hover:bg-zinc-800 rounded text-muted-foreground"
+                      className="p-1 hover:bg-muted rounded text-muted-foreground"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -285,6 +297,31 @@ export function SupplierList({ suppliers: initial, canManage }: Props) {
                   onChange={(e) => setField('email', e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Адрес</Label>
+              <Input
+                value={form.address}
+                onChange={(e) => setField('address', e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">IBAN</Label>
+              <Input
+                value={form.iban}
+                onChange={(e) => setField('iban', e.target.value)}
+                placeholder="BG..."
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Бележки</Label>
+              <Input
+                value={form.notes}
+                onChange={(e) => setField('notes', e.target.value)}
+              />
             </div>
           </div>
 

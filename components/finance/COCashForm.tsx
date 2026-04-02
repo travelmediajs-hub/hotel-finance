@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -93,7 +94,7 @@ export function COCashForm({ trigger }: Props) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="co-date">Дата на начално салдо *</Label>
-            <Input id="co-date" name="opening_balance_date" type="date" required />
+            <DateInput id="co-date" name="opening_balance_date" required />
           </div>
           <div className="space-y-2">
             <Label>Видове плащания *</Label>

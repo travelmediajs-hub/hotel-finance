@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { fmtDate } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
 import type { DailyReportStatus } from '@/types/finance'
 
@@ -144,7 +145,7 @@ export function DailyReportDrawer({
         ) : (<>
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            {report.date}
+            {fmtDate(report.date)}
             <Badge variant={statusVariants[report.status]}>
               {statusLabels[report.status]}
             </Badge>

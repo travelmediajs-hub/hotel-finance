@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import type { WithdrawalPurpose, WithdrawalStatus } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 
 const purposeLabels: Record<WithdrawalPurpose, string> = {
   PAY_EXP: 'Плащане разход',
@@ -76,7 +77,7 @@ export function WithdrawalView({ withdrawal }: Props) {
           </div>
           <div>
             <span className="text-muted-foreground">Дата: </span>
-            {withdrawal.withdrawal_date}
+            {fmtDate(withdrawal.withdrawal_date)}
           </div>
           <div>
             <span className="text-muted-foreground">Сума: </span>
@@ -140,7 +141,7 @@ export function WithdrawalView({ withdrawal }: Props) {
               {withdrawal.accounted_date && (
                 <div className="space-y-1">
                   <div className="text-muted-foreground">Дата на отчитане</div>
-                  <div>{withdrawal.accounted_date}</div>
+                  <div>{fmtDate(withdrawal.accounted_date)}</div>
                 </div>
               )}
               {withdrawal.accounted_amount != null && (

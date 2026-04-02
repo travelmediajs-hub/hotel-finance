@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import type { ChainStatus } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 
 const statusLabels: Record<ChainStatus, string> = {
   OPEN: 'Отворена',
@@ -59,7 +60,7 @@ export function ChainList({ chains }: Props) {
             className="cursor-pointer hover:bg-muted/50"
             onClick={() => router.push(`/finance/in-transit/chain/${chain.id}`)}
           >
-            <TableCell className="font-medium">{chain.chain_date}</TableCell>
+            <TableCell className="font-medium">{fmtDate(chain.chain_date)}</TableCell>
             <TableCell>{chain.name}</TableCell>
             <TableCell className="text-muted-foreground max-w-xs truncate">
               {chain.description ?? '—'}

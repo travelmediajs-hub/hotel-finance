@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -188,9 +189,8 @@ export function ExpenseActions({ expenseId, status, userRole, isOwner, remaining
               </div>
               <div className="space-y-2">
                 <Label htmlFor="paid_at">Дата на плащане</Label>
-                <Input
+                <DateInput
                   id="paid_at"
-                  type="date"
                   value={paidAt}
                   onChange={(e) => setPaidAt(e.target.value)}
                 />

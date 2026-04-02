@@ -6,6 +6,7 @@ import { Send, Check, CornerDownLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import type { DailyReportStatus, UserRole } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 import {
   DailyReportDrawer,
   type DrawerReportData,
@@ -527,7 +528,7 @@ export function DailyReportTable({
                 <tr key={report.id} className="hover:bg-zinc-900/20">
                   {/* Date cell - sticky */}
                   <td className="sticky left-0 z-10 bg-zinc-950 border border-zinc-800 px-2 py-0 font-medium whitespace-nowrap text-xs">
-                    {report.date}
+                    {fmtDate(report.date)}
                   </td>
 
                   {/* Department cells */}

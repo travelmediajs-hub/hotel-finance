@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -121,7 +122,7 @@ export function BankTransactionForm({ accounts, properties, trigger }: Props) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="tx-date">Дата *</Label>
-              <Input id="tx-date" name="transaction_date" type="date" required />
+              <DateInput id="tx-date" name="transaction_date" required />
             </div>
             <div className="space-y-2">
               <Label>Посока *</Label>

@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import type { IncomeEntry, IncomeEntryType, IncomeEntryStatus } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 
 export type IncomeEntryWithJoins = IncomeEntry & {
   properties: { name: string }
@@ -71,7 +72,7 @@ export function IncomeList({ entries }: Props) {
             className="cursor-pointer hover:bg-muted/50"
             onClick={() => router.push(`/finance/income/${entry.id}`)}
           >
-            <TableCell className="font-medium">{entry.entry_date}</TableCell>
+            <TableCell className="font-medium">{fmtDate(entry.entry_date)}</TableCell>
             <TableCell className="text-muted-foreground">
               {entry.properties.name}
             </TableCell>

@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import type { ConsolidationStatus, DailyReportStatus } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 
 const consolidationStatusLabels: Record<ConsolidationStatus, string> = {
   IN_PROGRESS: 'В процес',
@@ -66,7 +67,7 @@ export function ConsolidationView({ consolidation, dailyReports }: Props) {
       <Card>
         <CardHeader className="flex flex-row items-start justify-between space-y-0">
           <CardTitle className="text-lg">
-            Консолидация — {propertyName} — {consolidation.date}
+            Консолидация — {propertyName} — {fmtDate(consolidation.date)}
           </CardTitle>
           <Badge variant={consolidationStatusVariants[consolidation.status as ConsolidationStatus]}>
             {consolidationStatusLabels[consolidation.status as ConsolidationStatus]}

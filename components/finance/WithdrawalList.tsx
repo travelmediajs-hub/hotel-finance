@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import type { Withdrawal, WithdrawalPurpose, WithdrawalStatus } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 
 export type WithdrawalWithJoins = Withdrawal & {
   properties: { name: string }
@@ -74,7 +75,7 @@ export function WithdrawalList({ withdrawals }: Props) {
                 href={`/finance/withdrawals/${w.id}`}
                 className="text-foreground hover:underline font-medium"
               >
-                {w.withdrawal_date}
+                {fmtDate(w.withdrawal_date)}
               </Link>
             </TableCell>
             <TableCell className={`text-muted-foreground ${w.is_void ? 'line-through' : ''}`}>

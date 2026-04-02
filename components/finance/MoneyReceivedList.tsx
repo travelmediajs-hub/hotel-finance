@@ -8,6 +8,7 @@ import {
 import type {
   MoneyReceived, MoneyReceivedStatus, MoneyReceivedPurpose, DeliveryMethod,
 } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 
 export type MoneyReceivedWithJoins = MoneyReceived & {
   properties: { name: string }
@@ -73,7 +74,7 @@ export function MoneyReceivedList({ records }: Props) {
             className="cursor-pointer hover:bg-muted/50"
             onClick={() => router.push(`/finance/cash-flow/send/${rec.id}`)}
           >
-            <TableCell className="font-medium">{rec.sent_date}</TableCell>
+            <TableCell className="font-medium">{fmtDate(rec.sent_date)}</TableCell>
             <TableCell className="text-muted-foreground">
               {rec.properties.name}
             </TableCell>

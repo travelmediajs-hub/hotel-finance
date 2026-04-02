@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import type { ExpenseStatus, DocumentType, PaymentMethod } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 
 const statusLabels: Record<ExpenseStatus, string> = {
   DRAFT: 'Чернова',
@@ -106,11 +107,11 @@ export function ExpenseView({ expense }: Props) {
             )}
             <div className="space-y-1">
               <div className="text-muted-foreground">Дата на издаване</div>
-              <div>{expense.issue_date}</div>
+              <div>{fmtDate(expense.issue_date)}</div>
             </div>
             <div className="space-y-1">
               <div className="text-muted-foreground">Падеж</div>
-              <div>{expense.due_date}</div>
+              <div>{fmtDate(expense.due_date)}</div>
             </div>
             <div className="space-y-1">
               <div className="text-muted-foreground">Начин на плащане</div>

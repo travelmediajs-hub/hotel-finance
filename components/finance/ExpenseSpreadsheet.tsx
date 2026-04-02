@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { FilterSelect } from '@/components/finance/FilterSelect'
 import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
+import { DateInput } from '@/components/ui/date-input'
+import { fmtDate } from '@/lib/utils'
 import type { Expense, DocumentType, PaymentMethod, ExpenseStatus } from '@/types/finance'
 
 export type ExpenseWithJoins = Expense & {
@@ -70,6 +72,7 @@ interface NewRowState {
   supplier_id: string
   document_type: string
   amount_net: string
+  has_vat: boolean
   vat_amount: string
   payment_method: string
   payment_source_id: string
@@ -120,6 +123,7 @@ export function ExpenseSpreadsheet({
   const canCreate = userRole === 'MANAGER' || userRole === 'ADMIN_CO' || userRole === 'FINANCE_CO'
   const isCO = userRole === 'ADMIN_CO' || userRole === 'FINANCE_CO'
   const [expenses, setExpenses] = useState<ExpenseWithJoins[]>(initialExpenses ?? [])
+  const isManager = userRole === 'MANAGER'
   const [newRow, setNewRow] = useState<NewRowState>({
     issue_date: today,
     property_id: defaultPropertyId ?? properties[0]?.id ?? '',
@@ -127,6 +131,7 @@ export function ExpenseSpreadsheet({
     supplier_id: '',
     document_type: '',
     amount_net: '',
+    has_vat: false,
     vat_amount: '',
     payment_method: '',
     payment_source_id: '',
@@ -150,9 +155,25 @@ export function ExpenseSpreadsheet({
       const updated = { ...prev, [key]: value }
       // Reset payment source when payment method changes
       if (key === 'payment_method') updated.payment_source_id = ''
+      // Auto-calc VAT when net changes and has_vat is on
+      if (key === 'amount_net' && prev.has_vat) {
+        updated.vat_amount = (Math.round(parseFloat(value as string || '0') * 20) / 100).toFixed(2)
+      }
       return updated
     })
     setErrors((prev) => ({ ...prev, [key]: false }))
+  }
+
+  function toggleVat() {
+    setNewRow((prev) => {
+      const hasVat = !prev.has_vat
+      const net = parseFloat(prev.amount_net) || 0
+      return {
+        ...prev,
+        has_vat: hasVat,
+        vat_amount: hasVat ? (Math.round(net * 20) / 100).toFixed(2) : '',
+      }
+    })
   }
 
   function validate(): boolean {
@@ -164,7 +185,8 @@ export function ExpenseSpreadsheet({
     if (!newRow.document_type) errs.document_type = true
     if (!newRow.amount_net || parseFloat(newRow.amount_net) <= 0) errs.amount_net = true
     if (!newRow.payment_method) errs.payment_method = true
-    if (!newRow.payment_source_id) errs.payment_source_id = true
+    // Manager doesn't pick a payment source — cash goes to property register, bank goes to CO
+    // CO doesn't need to pick a source when creating — it's set at payment time
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -178,7 +200,7 @@ export function ExpenseSpreadsheet({
     const vatAmount = parseFloat(newRow.vat_amount) || 0
 
     const selectedSource = allSources.find(s => s.id === newRow.payment_source_id)
-    const body = {
+    const body: Record<string, unknown> = {
       property_id: newRow.property_id || defaultPropertyId,
       account_id: newRow.account_id,
       supplier_id: newRow.supplier_id,
@@ -190,6 +212,12 @@ export function ExpenseSpreadsheet({
       payment_method: newRow.payment_method,
       bank_account_id: selectedSource?.type === 'bank' ? selectedSource.id : null,
       co_cash_id: selectedSource?.type === 'cash' ? selectedSource.id : null,
+    }
+
+    // Manager paying cash: mark as paid from property cash register
+    if (isManager && newRow.payment_method === 'CASH') {
+      body.paid_from_cash = 'property'
+      body.mark_paid = true
     }
 
     try {
@@ -250,6 +278,7 @@ export function ExpenseSpreadsheet({
         supplier_id: '',
         document_type: '',
         amount_net: '',
+        has_vat: false,
         vat_amount: '',
         payment_method: '',
         payment_source_id: '',
@@ -299,8 +328,7 @@ export function ExpenseSpreadsheet({
             {canCreate && (
               <tr className="border-b border-border bg-primary/5">
                 <td className="px-1 py-1">
-                  <input
-                    type="date"
+                  <DateInput
                     value={newRow.issue_date}
                     onChange={(e) => setField('issue_date', e.target.value)}
                     className={errors.issue_date ? inputErrorClass : inputClass}
@@ -358,15 +386,26 @@ export function ExpenseSpreadsheet({
                   />
                 </td>
                 <td className="px-1 py-1 min-w-[70px]">
-                  <input
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    placeholder="0.00"
-                    value={newRow.vat_amount}
-                    onChange={(e) => setField('vat_amount', e.target.value)}
-                    className={`${inputClass} text-right`}
-                  />
+                  <div className="flex items-center gap-1">
+                    <label className="flex items-center cursor-pointer shrink-0" title="ДДС 20%">
+                      <input
+                        type="checkbox"
+                        checked={newRow.has_vat}
+                        onChange={toggleVat}
+                        className="h-3 w-3 rounded border-border accent-primary"
+                      />
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      placeholder="0.00"
+                      value={newRow.vat_amount}
+                      onChange={(e) => setField('vat_amount', e.target.value)}
+                      disabled={newRow.has_vat}
+                      className={`${inputClass} text-right ${newRow.has_vat ? 'bg-muted' : ''}`}
+                    />
+                  </div>
                 </td>
                 <td className="px-2 py-1 text-right font-mono text-muted-foreground whitespace-nowrap">
                   {((parseFloat(newRow.amount_net) || 0) + (parseFloat(newRow.vat_amount) || 0)).toFixed(2)}
@@ -375,19 +414,28 @@ export function ExpenseSpreadsheet({
                   <FilterSelect
                     value={newRow.payment_method}
                     onChange={(v) => setField('payment_method', v)}
-                    options={(Object.keys(paymentMethodLabels) as PaymentMethod[]).map(k => ({ value: k, label: paymentMethodLabels[k] }))}
+                    options={isManager
+                      ? [{ value: 'CASH', label: 'Брой' }, { value: 'BANK_TRANSFER', label: 'Банков' }]
+                      : (Object.keys(paymentMethodLabels) as PaymentMethod[]).map(k => ({ value: k, label: paymentMethodLabels[k] }))
+                    }
                     placeholder="Плащане"
                     error={errors.payment_method}
                   />
                 </td>
                 <td className="px-1 py-1 min-w-[120px]">
-                  <FilterSelect
-                    value={newRow.payment_source_id}
-                    onChange={(v) => setField('payment_source_id', v)}
-                    options={filteredSources.map(s => ({ value: s.id, label: s.name }))}
-                    placeholder="Каса/Банка..."
-                    error={errors.payment_source_id}
-                  />
+                  {isManager ? (
+                    <span className="text-[10px] text-muted-foreground px-1">
+                      {newRow.payment_method === 'CASH' ? 'Каса обект' : newRow.payment_method === 'BANK_TRANSFER' ? 'Към ЦО' : '—'}
+                    </span>
+                  ) : (
+                    <FilterSelect
+                      value={newRow.payment_source_id}
+                      onChange={(v) => setField('payment_source_id', v)}
+                      options={filteredSources.map(s => ({ value: s.id, label: s.name }))}
+                      placeholder="Каса/Банка..."
+                      error={errors.payment_source_id}
+                    />
+                  )}
                 </td>
                 <td className="px-1 py-1 whitespace-nowrap">
                   <div className="flex gap-1">
@@ -398,13 +446,15 @@ export function ExpenseSpreadsheet({
                     >
                       {loading ? '...' : 'Запази'}
                     </button>
-                    <button
-                      disabled={loading}
-                      onClick={() => handleSave(true)}
-                      className="px-2 py-0.5 text-xs rounded border border-border hover:bg-muted disabled:opacity-50 whitespace-nowrap"
-                    >
-                      {loading ? '...' : 'Изпрати'}
-                    </button>
+                    {!isCO && (
+                      <button
+                        disabled={loading}
+                        onClick={() => handleSave(true)}
+                        className="px-2 py-0.5 text-xs rounded border border-border hover:bg-muted disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {loading ? '...' : 'Изпрати'}
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -427,7 +477,7 @@ export function ExpenseSpreadsheet({
                 onClick={() => router.push(`/finance/expenses/${expense.id}`)}
                 className="border-b border-border hover:bg-muted/40 cursor-pointer transition-colors"
               >
-                <td className="px-2 py-1 whitespace-nowrap font-medium">{expense.issue_date}</td>
+                <td className="px-2 py-1 whitespace-nowrap font-medium">{fmtDate(expense.issue_date)}</td>
                 {isCO && (
                   <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
                     {expense.properties.name}

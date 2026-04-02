@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import type { PropertyConsolidation, ConsolidationStatus } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 
 export type ConsolidationWithJoins = PropertyConsolidation & {
   properties: { name: string }
@@ -60,7 +61,7 @@ export function ConsolidationList({ consolidations }: Props) {
                 href={`/finance/consolidations/${c.id}`}
                 className="text-foreground hover:underline font-medium"
               >
-                {c.date}
+                {fmtDate(c.date)}
               </Link>
             </TableCell>
             <TableCell className="text-muted-foreground">

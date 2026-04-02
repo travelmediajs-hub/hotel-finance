@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -138,9 +139,8 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="entry_date">Дата *</Label>
-              <Input
+              <DateInput
                 id="entry_date"
-                type="date"
                 value={entryDate}
                 onChange={(e) => setEntryDate(e.target.value)}
                 required
@@ -276,18 +276,16 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="period_from">От дата</Label>
-              <Input
+              <DateInput
                 id="period_from"
-                type="date"
                 value={periodFrom}
                 onChange={(e) => setPeriodFrom(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="period_to">До дата</Label>
-              <Input
+              <DateInput
                 id="period_to"
-                type="date"
                 value={periodTo}
                 onChange={(e) => setPeriodTo(e.target.value)}
               />

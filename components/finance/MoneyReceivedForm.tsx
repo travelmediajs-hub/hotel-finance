@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -167,9 +168,8 @@ export function MoneyReceivedForm({ properties, bankAccounts }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="sent_date">Дата на изпращане *</Label>
-              <Input
+              <DateInput
                 id="sent_date"
-                type="date"
                 value={sentDate}
                 onChange={(e) => setSentDate(e.target.value)}
               />

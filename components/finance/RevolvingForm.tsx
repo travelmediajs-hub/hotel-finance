@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
@@ -108,11 +109,11 @@ export function RevolvingForm({ accounts, trigger }: Props) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="rev-open">Дата на откриване *</Label>
-              <Input id="rev-open" name="open_date" type="date" required />
+              <DateInput id="rev-open" name="open_date" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="rev-expiry">Дата на изтичане</Label>
-              <Input id="rev-expiry" name="expiry_date" type="date" />
+              <DateInput id="rev-expiry" name="expiry_date" />
             </div>
             <div className="space-y-2">
               <Label>Банкова сметка *</Label>

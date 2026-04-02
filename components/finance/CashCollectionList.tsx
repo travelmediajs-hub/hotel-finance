@@ -6,6 +6,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import type { CashCollection, CashCollectionStatus } from '@/types/finance'
+import { fmtDate } from '@/lib/utils'
 
 export type CashCollectionWithJoins = CashCollection & {
   properties: { name: string }
@@ -58,7 +59,7 @@ export function CashCollectionList({ collections }: Props) {
             className="cursor-pointer hover:bg-muted/50"
             onClick={() => router.push(`/finance/cash-flow/collect/${col.id}`)}
           >
-            <TableCell className="font-medium">{col.collection_date}</TableCell>
+            <TableCell className="font-medium">{fmtDate(col.collection_date)}</TableCell>
             <TableCell className="text-muted-foreground">
               {col.properties.name}
             </TableCell>
@@ -66,7 +67,7 @@ export function CashCollectionList({ collections }: Props) {
               {col.amount.toFixed(2)} €
             </TableCell>
             <TableCell className="text-muted-foreground text-sm">
-              {col.covers_date_from} – {col.covers_date_to}
+              {fmtDate(col.covers_date_from)} – {fmtDate(col.covers_date_to)}
             </TableCell>
             <TableCell className="text-muted-foreground">
               {col.collected_by.full_name}

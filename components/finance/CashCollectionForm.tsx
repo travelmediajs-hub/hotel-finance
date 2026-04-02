@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -107,9 +108,8 @@ export function CashCollectionForm({ properties }: Props) {
 
             <div className="space-y-2">
               <Label htmlFor="collection_date">Дата на събиране *</Label>
-              <Input
+              <DateInput
                 id="collection_date"
-                type="date"
                 value={collectionDate}
                 onChange={(e) => setCollectionDate(e.target.value)}
               />
@@ -138,18 +138,16 @@ export function CashCollectionForm({ properties }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="covers_date_from">От дата *</Label>
-              <Input
+              <DateInput
                 id="covers_date_from"
-                type="date"
                 value={coversDateFrom}
                 onChange={(e) => setCoversDateFrom(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="covers_date_to">До дата *</Label>
-              <Input
+              <DateInput
                 id="covers_date_to"
-                type="date"
                 value={coversDateTo}
                 onChange={(e) => setCoversDateTo(e.target.value)}
               />

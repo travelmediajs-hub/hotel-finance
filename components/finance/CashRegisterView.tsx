@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
+import { fmtDate } from '@/lib/utils'
 import { Label } from '@/components/ui/label'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -142,7 +144,7 @@ export function CashRegisterView({ properties, balances, canEdit, defaultPropert
                   {fmt(balance.current_balance)} лв.
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Начално салдо: {fmt(balance.opening_balance)} лв. от {balance.opening_balance_date}
+                  Начално салдо: {fmt(balance.opening_balance)} лв. от {fmtDate(balance.opening_balance_date)}
                 </p>
               </div>
               {canEdit && (
@@ -161,8 +163,7 @@ export function CashRegisterView({ properties, balances, canEdit, defaultPropert
           <div className="flex items-end gap-3 mb-4">
             <div className="space-y-1">
               <Label className="text-xs">От</Label>
-              <Input
-                type="date"
+              <DateInput
                 value={from}
                 onChange={e => setFrom(e.target.value)}
                 className="h-8 text-sm w-[150px]"
@@ -170,8 +171,7 @@ export function CashRegisterView({ properties, balances, canEdit, defaultPropert
             </div>
             <div className="space-y-1">
               <Label className="text-xs">До</Label>
-              <Input
-                type="date"
+              <DateInput
                 value={to}
                 onChange={e => setTo(e.target.value)}
                 className="h-8 text-sm w-[150px]"
@@ -205,7 +205,7 @@ export function CashRegisterView({ properties, balances, canEdit, defaultPropert
                 )}
                 {!loading && movements.map((m, i) => (
                   <tr key={`${m.reference_id}-${i}`} className="border-b hover:bg-muted/20">
-                    <td className="px-3 py-2 text-muted-foreground font-mono text-xs">{m.date}</td>
+                    <td className="px-3 py-2 text-muted-foreground font-mono text-xs">{fmtDate(m.date)}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium border ${typeBadgeVariants[m.type] ?? ''}`}>
                         {typeLabels[m.type] ?? m.type}
@@ -248,8 +248,7 @@ export function CashRegisterView({ properties, balances, canEdit, defaultPropert
             </div>
             <div className="space-y-1.5">
               <Label className="text-sm">Дата на начално салдо</Label>
-              <Input
-                type="date"
+              <DateInput
                 value={editForm.opening_balance_date}
                 onChange={e => setEditForm(f => ({ ...f, opening_balance_date: e.target.value }))}
               />

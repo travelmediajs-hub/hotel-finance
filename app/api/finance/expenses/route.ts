@@ -72,11 +72,18 @@ export async function POST(request: NextRequest) {
 
   // Build insert object, excluding null optional fields that may not be in schema cache
   const { bank_account_id, co_cash_id, department_id, supplier, supplier_eik, document_number, attachment_url, note, ...requiredFields } = parsed.data
+  const markPaid = body.mark_paid === true && body.payment_method === 'CASH' && user.role === 'MANAGER'
+  const totalAmount = parsed.data.amount_net + parsed.data.vat_amount
   const insertData: Record<string, unknown> = {
     ...requiredFields,
     created_by_id: user.id,
-    status: 'DRAFT',
-    paid_amount: 0,
+    status: markPaid ? 'PAID' : (user.role === 'ADMIN_CO' || user.role === 'FINANCE_CO') ? 'UNPAID' : 'DRAFT',
+    paid_amount: markPaid ? totalAmount : 0,
+  }
+  if (markPaid) {
+    insertData.paid_at = new Date().toISOString().split('T')[0]
+    insertData.paid_by_id = user.id
+    insertData.paid_from_cash = body.paid_from_cash || 'property'
   }
   if (bank_account_id) insertData.bank_account_id = bank_account_id
   if (co_cash_id) insertData.co_cash_id = co_cash_id
