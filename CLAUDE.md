@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-AI Chat Assistant built with Next.js 16 (App Router), Supabase (auth + Postgres), and OpenAI streaming. UI text is in Bulgarian. Dark theme only (zinc/green palette).
+Hotel finance management system built with Next.js 16 (App Router), Supabase (auth + Postgres). UI text is in Bulgarian. Supports dark (zinc/green) and pink themes with a toggle.
 
 ## Commands
 
@@ -15,27 +15,22 @@ npm start        # Production server
 npm run lint     # ESLint
 ```
 
-Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `OPENAI_API_KEY`, and `OPENAI_MODEL`.
+Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
 ## Architecture
 
-**Route groups** separate concerns: `(auth)` for login/register, `(app)` for chat pages. Root `/` redirects to `/chat`.
+**Route groups** separate concerns: `(auth)` for login/register, `(finance)` for the finance module. Root `/` redirects to `/finance/dashboard`.
 
-**Auth flow:** Supabase cookie-based auth via `@supabase/ssr`. Middleware (`middleware.ts`) protects `/chat/**` routes and redirects authenticated users away from auth pages. Two Supabase client factories: `lib/supabase/server.ts` (server components/API routes, uses cookies) and `lib/supabase/client.ts` (browser).
+**Auth flow:** Supabase cookie-based auth via `@supabase/ssr`. Middleware (`middleware.ts`) protects `/finance/**` routes and redirects authenticated users away from auth pages. Two Supabase client factories: `lib/supabase/server.ts` (server components/API routes, uses cookies) and `lib/supabase/client.ts` (browser).
 
-**Chat streaming:** `POST /api/chat` sends messages to OpenAI and returns a `ReadableStream` (SSE). `ChatWindow` reads chunks with `getReader()` and updates UI token-by-token. Last 20 messages are sent as context. Content limit: 32KB per message.
+**Finance module:** Daily reports, expenses, income, transfers, banking, monthly reports, suppliers, chart of accounts, USALI reports, and property management. Role-based access: ADMIN_CO, FINANCE_CO, MANAGER, DEPT_HEAD.
 
-**API routes:**
-- `POST /api/conversations` — create conversation
-- `POST /api/messages` — save message, auto-sets conversation title from first user message
-- `POST /api/chat` — stream OpenAI response
+**Database:** Finance tables with RLS policies scoping queries to authenticated users. Schema in `supabase/migrations/`.
 
-**Database:** Two tables (`conversations`, `messages`) with RLS policies scoping all queries to the authenticated user. Schema in `supabase/migrations/`. Cascade delete on conversations removes messages.
+**Components:** Finance components in `components/finance/`. shadcn/ui components in `components/ui/`, configured via `components.json` (style: base-nova). Path alias `@/*` maps to project root.
 
-**Components:** `ChatWindow` is the main orchestrator managing message state and streaming. Sidebar loads conversation list. All chat/sidebar components are client components; page-level data fetching happens in server components (`app/(app)/chat/[id]/page.tsx`).
-
-**UI:** shadcn/ui components in `components/ui/`, configured via `components.json` (style: base-nova). Path alias `@/*` maps to project root. Markdown rendered with `react-markdown` + `rehype-highlight` + `rehype-sanitize`.
+**Theming:** `ThemeProvider` in `components/theme-provider.tsx` manages dark/pink theme switching. Toggle in sidebar. Choice persisted in localStorage.
 
 ## Key Types
 
-`types/chat.ts` defines `Message`, `Conversation`, and `ChatMessage` interfaces shared across client and server.
+`types/finance.ts` defines finance-related interfaces and types.

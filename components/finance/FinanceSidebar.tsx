@@ -18,9 +18,10 @@ import {
 } from '@/components/ui/select'
 import {
   Building2, LayoutDashboard, FileText, FileCheck, Receipt, Wallet,
-  Landmark, ArrowRightLeft, TrendingUp, MessageSquare,
+  Landmark, ArrowRightLeft, TrendingUp,
   CalendarDays, Eye, Package, BookOpen, BarChart3, Users,
 } from 'lucide-react'
+import { ThemeToggle } from '@/components/theme-toggle'
 import type { UserRole } from '@/types/finance'
 
 interface NavItem {
@@ -85,9 +86,12 @@ export function FinanceSidebar({ userFullName, userRole, realRole, isSimulating 
 
   return (
     <div className="flex flex-col h-full w-64 bg-card border-r border-border">
-      <div className="p-4">
-        <h1 className="text-sm font-semibold text-foreground mb-1">Финанси</h1>
-        <p className="text-xs text-muted-foreground">Хотелска верига</p>
+      <div className="p-4 flex items-start justify-between">
+        <div>
+          <h1 className="text-sm font-semibold text-foreground mb-1">Финанси</h1>
+          <p className="text-xs text-muted-foreground">Хотелска верига</p>
+        </div>
+        <ThemeToggle />
       </div>
 
       <Separator className="bg-border" />
@@ -154,18 +158,6 @@ export function FinanceSidebar({ userFullName, userRole, realRole, isSimulating 
           })}
         </nav>
       </ScrollArea>
-
-      <Separator className="bg-border" />
-
-      <div className="p-2">
-        <Link
-          href="/chat"
-          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-        >
-          <MessageSquare className="h-4 w-4 shrink-0" />
-          AI Асистент
-        </Link>
-      </div>
 
       <Separator className="bg-border" />
 

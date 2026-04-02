@@ -2,6 +2,11 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  // Redirect old chat routes to finance dashboard
+  if (request.nextUrl.pathname.startsWith('/chat')) {
+    return NextResponse.redirect(new URL('/finance/dashboard', request.url))
+  }
+
   const isProtected = request.nextUrl.pathname.startsWith('/finance')
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
                      request.nextUrl.pathname.startsWith('/register')
@@ -49,5 +54,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/finance/:path*', '/login', '/register'],
+  matcher: ['/finance/:path*', '/login', '/register', '/chat/:path*'],
 }

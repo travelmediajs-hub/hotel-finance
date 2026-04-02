@@ -28,7 +28,7 @@ export default function RegisterPage() {
       return
     }
 
-    router.push('/chat')
+    router.push('/finance/dashboard')
     router.refresh()
   }
 
@@ -37,7 +37,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm space-y-6 p-8 rounded-lg border border-border bg-card">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold text-foreground">Регистрация</h1>
-          <p className="text-sm text-muted-foreground">Създай своя AI асистент</p>
+          <p className="text-sm text-muted-foreground">Създай акаунт за финансовата система</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
