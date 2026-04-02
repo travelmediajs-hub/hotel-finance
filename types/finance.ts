@@ -618,3 +618,32 @@ export interface NetCashPosition {
   unpaid_obligations: number
   loan_payments_30d: number
 }
+
+export interface PropertyCashRegister {
+  id: string
+  property_id: string
+  name: string
+  opening_balance: number
+  opening_balance_date: string
+  created_at: string
+}
+
+export interface PropertyCashBalance {
+  id: string
+  property_id: string
+  name: string
+  opening_balance: number
+  opening_balance_date: string
+  current_balance: number
+}
+
+export type CashMovementType = 'daily_report' | 'withdrawal' | 'cash_collection' | 'money_received' | 'transfer_in' | 'transfer_out'
+
+export interface CashMovement {
+  date: string
+  type: CashMovementType
+  description: string
+  income: number | null
+  expense: number | null
+  reference_id: string
+}
