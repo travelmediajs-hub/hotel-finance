@@ -66,5 +66,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'database_error' }, { status: 500 })
   }
 
+  // Auto-create cash register for the new property
+  await supabase
+    .from('property_cash_registers')
+    .insert({
+      property_id: data.id,
+      name: `Каса ${data.name}`,
+      opening_balance: 0,
+      opening_balance_date: new Date().toISOString().split('T')[0],
+    })
+
   return NextResponse.json(data, { status: 201 })
 }
