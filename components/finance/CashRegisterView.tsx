@@ -119,7 +119,7 @@ export function CashRegisterView({ properties, balances, canEdit, defaultPropert
           <div className="flex items-center justify-between gap-4">
             <CardTitle className="text-lg">Каса</CardTitle>
             {properties.length > 1 && (
-              <Select value={propertyId} onValueChange={setPropertyId}>
+              <Select value={propertyId} onValueChange={(v) => v && setPropertyId(v)}>
                 <SelectTrigger className="w-[250px] h-8 text-sm">
                   <SelectValue placeholder="Изберете обект" />
                 </SelectTrigger>
