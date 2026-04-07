@@ -45,8 +45,9 @@ export default async function PropertyReportPage({ params, searchParams }: Props
   }
 
   const today = new Date()
-  const defFrom = parseDate(from) || new Date(today.getFullYear(), today.getMonth() - 11, 1).toISOString().slice(0, 10)
-  const defTo = parseDate(to) || today.toISOString().slice(0, 10)
+  const todayIso = today.toISOString().slice(0, 10)
+  const defFrom = parseDate(from) || todayIso
+  const defTo = parseDate(to) || todayIso
 
   const { data: property } = await supabase.from('properties').select('*').eq('id', id).single()
   if (!property) notFound()
@@ -209,6 +210,7 @@ export default async function PropertyReportPage({ params, searchParams }: Props
             <input
               type="date"
               name="from"
+              lang="bg-BG"
               defaultValue={defFrom}
               className="border rounded px-2 py-1 text-sm bg-background w-40 cursor-pointer"
             />
@@ -218,6 +220,7 @@ export default async function PropertyReportPage({ params, searchParams }: Props
             <input
               type="date"
               name="to"
+              lang="bg-BG"
               defaultValue={defTo}
               className="border rounded px-2 py-1 text-sm bg-background w-40 cursor-pointer"
             />
