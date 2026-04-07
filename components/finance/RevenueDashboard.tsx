@@ -128,6 +128,7 @@ export function RevenueDashboard({ defaultRooms = 20, defaultFrom, defaultTo, pr
   }
   const [data, setData] = useState<Reservation[] | null>(null)
   const [priorData, setPriorData] = useState<Reservation[] | null>(null)
+  const [heatmapData, setHeatmapData] = useState<Reservation[] | null>(null)
   const [loading, setLoading] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -168,6 +169,19 @@ export function RevenueDashboard({ defaultRooms = 20, defaultFrom, defaultTo, pr
       const pj = await pr.json()
       if (pr.ok) setPickup(pj)
       else setPickup(null)
+      // Heatmap данни (фиксиран прозорец: текущ месец + следващ)
+      try {
+        const td = new Date()
+        const hFrom = new Date(td.getFullYear(), td.getMonth(), 1)
+        const hTo = new Date(td.getFullYear(), td.getMonth() + 2, 0)
+        const isoD = (d: Date) => d.toISOString().slice(0, 10)
+        const hp = new URLSearchParams({ from: isoD(hFrom), to: isoD(hTo) })
+        if (propertyId) hp.set('propertyId', propertyId)
+        const hr = await fetch(`/api/creato/reservations?${hp.toString()}`)
+        const hj = await hr.json()
+        if (hr.ok) setHeatmapData((hj.data || []).map(normaliseRow))
+        else setHeatmapData(null)
+      } catch { setHeatmapData(null) }
       // Forecast
       const fp = new URLSearchParams({ rooms: String(rooms) })
       if (propertyId) fp.set('propertyId', propertyId)
@@ -239,12 +253,17 @@ export function RevenueDashboard({ defaultRooms = 20, defaultFrom, defaultTo, pr
     }
   }
 
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  // Не зареждаме автоматично — потребителят натиска "Покажи" след избор на период.
 
   const calc = useMemo(() => (data ? compute(data, from, to, rooms) : null), [data, from, to, rooms])
+  const heatmapCells = useMemo(() => {
+    const src = heatmapData ?? data
+    if (!src) return null
+    const td = new Date()
+    const hFrom = new Date(td.getFullYear(), td.getMonth(), 1).toISOString().slice(0, 10)
+    const hTo = new Date(td.getFullYear(), td.getMonth() + 2, 0).toISOString().slice(0, 10)
+    return compute(src, hFrom, hTo, rooms).heatmap
+  }, [heatmapData, data, rooms])
   const prior = useMemo(
     () => (priorData && compareYoy ? compute(priorData, pyShift(from), pyShift(to), rooms) : null),
     [priorData, from, to, rooms, compareYoy],
@@ -479,7 +498,7 @@ export function RevenueDashboard({ defaultRooms = 20, defaultFrom, defaultTo, pr
             )}
             <Card>
               <CardHeader><CardTitle className="text-base">Календар на натоварването</CardTitle></CardHeader>
-              <CardContent><HeatmapCalendar cells={calc.heatmap} /></CardContent>
+              <CardContent><HeatmapCalendar cells={heatmapCells ?? calc.heatmap} /></CardContent>
             </Card>
             <Card>
               <CardHeader><CardTitle className="text-base">Cancellation Rate по месец</CardTitle></CardHeader>
