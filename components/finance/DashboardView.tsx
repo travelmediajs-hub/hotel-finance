@@ -33,6 +33,19 @@ interface COCash {
   total_balance: number
 }
 
+interface PropertyCashRegister {
+  id: string
+  property_id: string
+  name: string
+  property_name: string
+  current_balance: number
+}
+
+interface PropertyCash {
+  registers: PropertyCashRegister[]
+  total_balance: number
+}
+
 interface Loan {
   id: string
   bank: string
@@ -97,6 +110,7 @@ interface UpcomingLoanPayment {
 interface DashboardData {
   bank_accounts: BankAccount[]
   co_cash: COCash
+  property_cash: PropertyCash
   loans: Loan[]
   revolving_credits: RevolvingCredit[]
   unpaid_expenses: UnpaidExpenses
@@ -183,6 +197,7 @@ export function DashboardView() {
   const {
     bank_accounts,
     co_cash: rawCoCash,
+    property_cash,
     loans,
     revolving_credits,
     unpaid_expenses,
@@ -280,6 +295,46 @@ export function DashboardView() {
                   <span className="text-muted-foreground">Общо</span>
                   <span className={`font-mono ${co_cash.total_balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {formatAmount(co_cash.total_balance)}
+                  </span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Каси обекти */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <span>🏨</span> Каси обекти
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {!property_cash || property_cash.registers.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Няма каси</p>
+            ) : (
+              property_cash.registers.map(reg => (
+                <Link
+                  key={reg.id}
+                  href={`/finance/properties/${reg.property_id}/report`}
+                  className="flex items-center justify-between text-sm hover:bg-muted/40 rounded px-1 -mx-1 py-0.5 transition-colors"
+                >
+                  <span className="text-muted-foreground truncate max-w-[160px] hover:text-foreground" title={reg.name}>
+                    {reg.property_name || reg.name}
+                  </span>
+                  <span className={`font-mono font-medium ${reg.current_balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatAmount(reg.current_balance)}
+                  </span>
+                </Link>
+              ))
+            )}
+            {property_cash && property_cash.registers.length > 1 && (
+              <>
+                <Separator className="my-2" />
+                <div className="flex items-center justify-between text-sm font-semibold">
+                  <span className="text-muted-foreground">Общо</span>
+                  <span className={`font-mono ${property_cash.total_balance >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatAmount(property_cash.total_balance)}
                   </span>
                 </div>
               </>

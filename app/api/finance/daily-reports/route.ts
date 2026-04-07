@@ -103,6 +103,7 @@ export async function POST(request: NextRequest) {
     .select('id')
     .eq('property_id', property_id)
     .eq('status', 'ACTIVE')
+    .eq('kind', 'REVENUE')
 
   if (departments && departments.length > 0) {
     const { error: linesError } = await supabase

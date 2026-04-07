@@ -421,10 +421,12 @@ export function DailyReportTable({
     )
   }
 
-  // Cell styling: Excel-like, input fills the whole cell
-  const cellBase = 'border border-zinc-800 text-right tabular-nums font-mono text-xs'
-  const cellPad = 'px-1.5 py-0'
-  const inputClass = 'h-8 w-full bg-transparent border-0 text-right tabular-nums font-mono text-xs px-1.5 py-0 focus:ring-1 focus:ring-primary rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
+  // Cell styling: clean, breathable, grouped
+  const cellBase = 'border-b border-border/40 text-right tabular-nums font-mono text-[11px]'
+  const cellPad = 'px-2.5 py-2'
+  const cashBg = 'bg-emerald-500/[0.03]'
+  const posBg = 'bg-sky-500/[0.03]'
+  const inputClass = 'h-9 w-full bg-transparent border-0 text-right tabular-nums font-mono text-[11px] px-2 py-0 focus:ring-1 focus:ring-primary rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
 
   return (
     <>
@@ -464,51 +466,52 @@ export function DailyReportTable({
         </div>
       )}
 
-      <div className="overflow-x-auto">
-        <table className="border-collapse text-xs" style={{ minWidth: '100%' }}>
-          <thead>
-            {/* Row 1: Date + department group headers + summary + actions */}
-            <tr className="bg-zinc-900/50">
-              <th className="sticky left-0 z-10 bg-zinc-900 border border-zinc-800 px-2 py-1.5 text-left font-medium w-24">
-                Дата
-              </th>
-              {departments.map((dept) => (
-                <th
-                  key={dept.id}
-                  colSpan={8}
-                  className="border border-zinc-800 px-1 py-1.5 text-center font-medium"
-                >
-                  {dept.name}
+      <div className="rounded-xl border border-border/60 bg-card/30 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="border-collapse w-full text-[11px]">
+            <thead>
+              {/* Row 1: Date + department group headers + summary + actions */}
+              <tr className="bg-muted/40 border-b border-border/60">
+                <th className="sticky left-0 z-10 bg-muted/80 backdrop-blur px-3 py-2.5 text-left font-semibold text-[11px] uppercase tracking-wider text-muted-foreground w-24 border-r border-border/60">
+                  Дата
                 </th>
-              ))}
-              <th className="border border-zinc-800 px-1 py-1.5 text-center font-medium">Каса</th>
-              <th className="border border-zinc-800 px-1 py-1.5 text-center font-medium">ПОС</th>
-              <th className="border border-zinc-800 px-1 py-1.5 text-center font-medium">Разл.</th>
-              <th className="border border-zinc-800 px-1 py-1.5 text-center font-medium w-8">Ст</th>
-              <th className="border border-zinc-800 px-1 py-1.5 text-center font-medium w-16" />
-            </tr>
-            {/* Row 2: sub-column labels */}
-            <tr className="bg-zinc-900/30 text-[10px] text-muted-foreground">
-              <th className="sticky left-0 z-10 bg-zinc-950 border border-zinc-800" />
-              {departments.map((dept) => (
-                <React.Fragment key={dept.id}>
-                  <th className={`${cellBase} ${cellPad}`}>К+</th>
-                  <th className={`${cellBase} ${cellPad}`}>К-</th>
-                  <th className={`${cellBase} ${cellPad}`}>Z каса</th>
-                  <th className={`${cellBase} ${cellPad}`}>К разл</th>
-                  <th className={`${cellBase} ${cellPad}`}>П+</th>
-                  <th className={`${cellBase} ${cellPad}`}>П-</th>
-                  <th className={`${cellBase} ${cellPad}`}>ПОС отч</th>
-                  <th className={`${cellBase} ${cellPad}`}>П разл</th>
-                </React.Fragment>
-              ))}
-              <th className={`${cellBase} ${cellPad}`}>нето</th>
-              <th className={`${cellBase} ${cellPad}`}>нето</th>
-              <th className={`${cellBase} ${cellPad}`} />
-              <th className="border border-zinc-800" />
-              <th className="border border-zinc-800" />
-            </tr>
-          </thead>
+                {departments.map((dept, idx) => (
+                  <th
+                    key={dept.id}
+                    colSpan={8}
+                    className={`px-3 py-2.5 text-center font-semibold text-[12px] text-foreground ${idx > 0 ? 'border-l border-border/60' : ''}`}
+                  >
+                    {dept.name}
+                  </th>
+                ))}
+                <th colSpan={3} className="px-3 py-2.5 text-center font-semibold text-[11px] uppercase tracking-wider text-muted-foreground border-l border-border/60">
+                  Общо
+                </th>
+                <th className="px-2 py-2.5 text-center font-semibold text-[11px] uppercase tracking-wider text-muted-foreground w-10 border-l border-border/60">Ст</th>
+                <th className="px-2 py-2.5 w-20 border-l border-border/60" />
+              </tr>
+              {/* Row 2: sub-column labels */}
+              <tr className="bg-muted/20 text-[10px] uppercase tracking-wide text-muted-foreground border-b border-border/60">
+                <th className="sticky left-0 z-10 bg-muted/60 backdrop-blur border-r border-border/60" />
+                {departments.map((dept, idx) => (
+                  <React.Fragment key={dept.id}>
+                    <th className={`${cellBase} ${cellPad} ${cashBg} font-semibold ${idx > 0 ? 'border-l border-border/60' : ''}`}>К+</th>
+                    <th className={`${cellBase} ${cellPad} ${cashBg} font-semibold`}>К−</th>
+                    <th className={`${cellBase} ${cellPad} ${cashBg} font-semibold`}>Z</th>
+                    <th className={`${cellBase} ${cellPad} ${cashBg} font-semibold`}>Δ</th>
+                    <th className={`${cellBase} ${cellPad} ${posBg} font-semibold border-l border-border/40`}>П+</th>
+                    <th className={`${cellBase} ${cellPad} ${posBg} font-semibold`}>П−</th>
+                    <th className={`${cellBase} ${cellPad} ${posBg} font-semibold`}>Отч</th>
+                    <th className={`${cellBase} ${cellPad} ${posBg} font-semibold`}>Δ</th>
+                  </React.Fragment>
+                ))}
+                <th className={`${cellBase} ${cellPad} font-semibold border-l border-border/60`}>Каса</th>
+                <th className={`${cellBase} ${cellPad} font-semibold`}>ПОС</th>
+                <th className={`${cellBase} ${cellPad} font-semibold`}>Δ</th>
+                <th className="border-l border-border/60" />
+                <th className="border-l border-border/60" />
+              </tr>
+            </thead>
           <tbody>
             {reports.map((report) => {
               const editable = canEditReport(report.status)
@@ -525,9 +528,9 @@ export function DailyReportTable({
               const showReturn = report.status === 'SUBMITTED' && isCO(userRole)
 
               return (
-                <tr key={report.id} className="hover:bg-zinc-900/20">
+                <tr key={report.id} className="group hover:bg-muted/30 transition-colors">
                   {/* Date cell - sticky */}
-                  <td className="sticky left-0 z-10 bg-zinc-950 border border-zinc-800 px-2 py-0 font-medium whitespace-nowrap text-xs">
+                  <td className="sticky left-0 z-10 bg-card group-hover:bg-muted/40 transition-colors border-r border-border/60 border-b border-border/40 px-3 py-2 font-medium whitespace-nowrap text-[11px]">
                     {fmtDate(report.date)}
                   </td>
 
@@ -539,14 +542,14 @@ export function DailyReportTable({
                     if (!line) {
                       return (
                         <React.Fragment key={dept.id}>
-                          <td className={`${cellBase} ${cellPad}`}>—</td>
-                          <td className={`${cellBase} ${cellPad}`}>—</td>
-                          <td className={`${cellBase} ${cellPad}`}>—</td>
-                          <td className={`${cellBase} ${cellPad}`}>—</td>
-                          <td className={`${cellBase} ${cellPad}`}>—</td>
-                          <td className={`${cellBase} ${cellPad}`}>—</td>
-                          <td className={`${cellBase} ${cellPad}`}>—</td>
-                          <td className={`${cellBase} ${cellPad}`}>—</td>
+                          <td className={`${cellBase} ${cellPad} ${cashBg} text-muted-foreground/50`}>—</td>
+                          <td className={`${cellBase} ${cellPad} ${cashBg} text-muted-foreground/50`}>—</td>
+                          <td className={`${cellBase} ${cellPad} ${cashBg} text-muted-foreground/50`}>—</td>
+                          <td className={`${cellBase} ${cellPad} ${cashBg} text-muted-foreground/50`}>—</td>
+                          <td className={`${cellBase} ${cellPad} ${posBg} text-muted-foreground/50 border-l border-border/40`}>—</td>
+                          <td className={`${cellBase} ${cellPad} ${posBg} text-muted-foreground/50`}>—</td>
+                          <td className={`${cellBase} ${cellPad} ${posBg} text-muted-foreground/50`}>—</td>
+                          <td className={`${cellBase} ${cellPad} ${posBg} text-muted-foreground/50`}>—</td>
                         </React.Fragment>
                       )
                     }
@@ -557,7 +560,7 @@ export function DailyReportTable({
                       return (
                         <React.Fragment key={dept.id}>
                           {cashFields.map((field) => (
-                            <td key={field} className="border border-zinc-800 p-0">
+                            <td key={field} className={`${cellBase} p-0`}>
                               <input
                                 type="number"
                                 min={0}
@@ -571,7 +574,7 @@ export function DailyReportTable({
                               />
                             </td>
                           ))}
-                          <td className="border border-zinc-800 p-0">
+                          <td className={`${cellBase} p-0`}>
                             <input
                               type="number"
                               step="0.01"
@@ -587,7 +590,7 @@ export function DailyReportTable({
                             {fmt(Number(line.cash_diff))}
                           </td>
                           {posFields.map((field) => (
-                            <td key={field} className="border border-zinc-800 p-0">
+                            <td key={field} className={`${cellBase} p-0`}>
                               <input
                                 type="number"
                                 min={0}
@@ -601,7 +604,7 @@ export function DailyReportTable({
                               />
                             </td>
                           ))}
-                          <td className="border border-zinc-800 p-0">
+                          <td className={`${cellBase} p-0`}>
                             <input
                               type="number"
                               step="0.01"
@@ -623,20 +626,20 @@ export function DailyReportTable({
                     // Read-only
                     return (
                       <React.Fragment key={dept.id}>
-                        <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.cash_income))}</td>
-                        <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.cash_refund))}</td>
-                        <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.z_cash))}</td>
-                        <td className={`${cellBase} ${cellPad} ${diffColor(Number(line.cash_diff))}`}>{fmt(Number(line.cash_diff))}</td>
-                        <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.pos_income))}</td>
-                        <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.pos_refund))}</td>
-                        <td className={`${cellBase} ${cellPad}`}>{fmt(Number(line.pos_report_amount))}</td>
-                        <td className={`${cellBase} ${cellPad} ${diffColor(Number(line.pos_diff))}`}>{fmt(Number(line.pos_diff))}</td>
+                        <td className={`${cellBase} ${cellPad} ${cashBg}`}>{fmt(Number(line.cash_income))}</td>
+                        <td className={`${cellBase} ${cellPad} ${cashBg}`}>{fmt(Number(line.cash_refund))}</td>
+                        <td className={`${cellBase} ${cellPad} ${cashBg}`}>{fmt(Number(line.z_cash))}</td>
+                        <td className={`${cellBase} ${cellPad} ${cashBg} ${diffColor(Number(line.cash_diff))}`}>{fmt(Number(line.cash_diff))}</td>
+                        <td className={`${cellBase} ${cellPad} ${posBg} border-l border-border/40`}>{fmt(Number(line.pos_income))}</td>
+                        <td className={`${cellBase} ${cellPad} ${posBg}`}>{fmt(Number(line.pos_refund))}</td>
+                        <td className={`${cellBase} ${cellPad} ${posBg}`}>{fmt(Number(line.pos_report_amount))}</td>
+                        <td className={`${cellBase} ${cellPad} ${posBg} ${diffColor(Number(line.pos_diff))}`}>{fmt(Number(line.pos_diff))}</td>
                       </React.Fragment>
                     )
                   })}
 
                   {/* Summary cells */}
-                  <td className={`${cellBase} ${cellPad} font-medium`}>
+                  <td className={`${cellBase} ${cellPad} font-semibold border-l border-border/60`}>
                     {fmt(Number(report.total_cash_net))}
                   </td>
                   <td className={`${cellBase} ${cellPad} font-medium`}>
@@ -647,12 +650,12 @@ export function DailyReportTable({
                   </td>
 
                   {/* Status */}
-                  <td className={`border border-zinc-800 text-center ${statusColors[report.status]}`}>
+                  <td className={`${cellBase} text-center border-l border-border/60 ${statusColors[report.status]}`}>
                     <span title={report.status}>{statusIcons[report.status]}</span>
                   </td>
 
                   {/* Actions + drawer toggle */}
-                  <td className="border border-zinc-800 px-1 py-0">
+                  <td className={`${cellBase} px-1 py-1 border-l border-border/60`}>
                     <div className="flex items-center gap-0.5 justify-center">
                       {showSubmit && (
                         <button
@@ -696,8 +699,9 @@ export function DailyReportTable({
                 </tr>
               )
             })}
-          </tbody>
-        </table>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <DailyReportDrawer

@@ -21,6 +21,7 @@ export async function GET() {
     lastTxResult,
     coCashResult,
     coCashBalancesResult,
+    propertyCashResult,
     loansResult,
     loanBalancesResult,
     revolvingResult,
@@ -57,6 +58,11 @@ export async function GET() {
     supabase
       .from('co_cash_balances')
       .select('id, current_balance'),
+
+    // 5b. Property cash registers with balances
+    supabase
+      .from('property_cash_balances')
+      .select('id, property_id, name, current_balance'),
 
     // 6. Loans (active)
     supabase
@@ -165,6 +171,29 @@ export async function GET() {
   const co_cash = {
     registers: co_cash_registers,
     total_balance: totalCoCash,
+  }
+
+  // --- Property cash registers ---
+  const propertyCashRaw = (propertyCashResult.data ?? []) as Array<{
+    id: string
+    property_id: string
+    name: string
+    current_balance: number
+  }>
+  // Fetch property names in one extra query-less lookup via properties already joined? Do a simple map:
+  const { data: propsForCash } = await supabase.from('properties').select('id, name')
+  const propNameMap = new Map((propsForCash ?? []).map((p) => [p.id, p.name as string]))
+  const property_cash_registers = propertyCashRaw.map((pcr) => ({
+    id: pcr.id,
+    property_id: pcr.property_id,
+    name: pcr.name,
+    property_name: propNameMap.get(pcr.property_id) ?? '',
+    current_balance: Number(pcr.current_balance) || 0,
+  }))
+  const totalPropertyCash = property_cash_registers.reduce((s, r) => s + r.current_balance, 0)
+  const property_cash = {
+    registers: property_cash_registers,
+    total_balance: totalPropertyCash,
   }
 
   // --- Loans ---
@@ -289,13 +318,15 @@ export async function GET() {
 
   const net_cash_position =
     totalBankBalance +
-    co_cash.total_balance -
+    co_cash.total_balance +
+    property_cash.total_balance -
     totalPendingExpenses -
     totalUpcomingLoanPayments
 
   return NextResponse.json({
     bank_accounts,
     co_cash,
+    property_cash,
     loans,
     revolving_credits,
     unpaid_expenses,

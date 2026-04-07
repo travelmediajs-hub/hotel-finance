@@ -52,6 +52,7 @@ export default async function DailyReportsPage({ searchParams }: Props) {
     .select('id, name, fiscal_device_id, sort_order')
     .eq('property_id', selectedPropertyId)
     .eq('status', 'ACTIVE')
+    .eq('kind', 'REVENUE')
     .order('sort_order')
     .order('name')
 
