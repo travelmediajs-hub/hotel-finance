@@ -115,6 +115,8 @@ export function DailyReportDrawer({
       await onSave(report!.id, {
         lines: lines.map((l) => ({
           department_id: l.department_id,
+          cash_income: l.z_cash,
+          pos_income: l.pos_report_amount,
           z_cash: l.z_cash,
           z_pos: l.z_pos,
           z_attachment_url: l.z_attachment_url || null,
