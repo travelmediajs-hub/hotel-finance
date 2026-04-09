@@ -118,9 +118,12 @@ export function FinanceSidebar({
   return (
     <div className="flex flex-col h-full w-64 bg-card border-r border-border">
       <div className="p-4 flex items-start justify-between">
-        <div>
-          <h1 className="text-sm font-semibold text-foreground mb-1">Финанси</h1>
-          <p className="text-xs text-muted-foreground">Хотелска верига</p>
+        <div className="flex items-center gap-2">
+          <img src="/logos/kp-hotels.svg" alt="K&P Hotels" className="h-12 w-12" />
+          <div>
+            <h1 className="text-sm font-semibold text-foreground leading-tight">K&amp;P Hotels</h1>
+            <p className="text-[10px] text-muted-foreground">Финанси</p>
+          </div>
         </div>
         <ThemeToggle />
       </div>

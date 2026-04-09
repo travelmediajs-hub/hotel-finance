@@ -108,7 +108,12 @@
       "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\gorch\\\\everything-claude-code\\\\install.ps1\" -profile full)",
       "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\gorch\\\\everything-claude-code\\\\install.ps1\" -- --profile full)",
       "Read(//c/Users/gorch/.claude/ecc//**)",
-      "Read(//c/Users/gorch/.claude/skills//**)"
+      "Read(//c/Users/gorch/.claude/skills//**)",
+      "Bash(command -v pdftocairo)",
+      "Bash(command -v inkscape)",
+      "Bash(command -v pdf2svg)",
+      "Bash(command -v gs)",
+      "Bash(apt list:*)"
     ]
   }
 }
