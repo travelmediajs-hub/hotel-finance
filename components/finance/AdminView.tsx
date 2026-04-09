@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -113,11 +113,9 @@ function UsersTab({
         <h2 className="text-sm font-semibold">Потребители ({users.length})</h2>
         {canUsersManage && (
           <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm" className="h-7 text-xs">
-                <UserPlus className="h-3.5 w-3.5 mr-1" /> Покани
-              </Button>
-            </DialogTrigger>
+            <Button size="sm" className="h-7 text-xs" onClick={() => setInviteOpen(true)}>
+              <UserPlus className="h-3.5 w-3.5 mr-1" /> Покани
+            </Button>
             <InviteDialog
               roles={roles}
               properties={properties}
@@ -448,11 +446,14 @@ function RolesTab({
         {canRolesManage && (
           <>
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" variant="outline" className="h-8 text-xs">
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Нова роля
-                </Button>
-              </DialogTrigger>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Нова роля
+              </Button>
               <CreateRoleDialog
                 onDone={(newKey) => {
                   setCreateOpen(false)
