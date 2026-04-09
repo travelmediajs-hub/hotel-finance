@@ -19,7 +19,7 @@ import {
 import {
   Building2, LayoutDashboard, FileText, FileCheck, Receipt, Wallet,
   Landmark, ArrowRightLeft, TrendingUp,
-  CalendarDays, Eye, Package, BookOpen, BarChart3, Users,
+  CalendarDays, Eye, Package, BookOpen, BarChart3, Users, Shield,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import type { UserRole } from '@/types/finance'
@@ -47,6 +47,7 @@ const navItems: NavItem[] = [
   { href: '/finance/chart-of-accounts', label: 'Сметкоплан', icon: BookOpen, roles: ['ADMIN_CO'] },
   { href: '/finance/usali-reports', label: 'USALI Отчети', icon: BarChart3, roles: ['ADMIN_CO', 'FINANCE_CO'] },
   { href: '/finance/properties', label: 'Обекти', icon: Building2, roles: ['ADMIN_CO'] },
+  { href: '/finance/admin', label: 'Админ', icon: Shield, roles: ['ADMIN_CO'] },
 ]
 
 const roleLabels: Record<UserRole, string> = {
