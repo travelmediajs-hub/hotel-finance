@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { FilterSelect } from '@/components/finance/FilterSelect'
 import { useHiddenAccounts } from '@/lib/finance/useHiddenAccounts'
 import { DateInput } from '@/components/ui/date-input'
+import { Pencil } from 'lucide-react'
 import { fmtDate } from '@/lib/utils'
 import type { Expense, DocumentType, PaymentMethod, ExpenseStatus } from '@/types/finance'
 
@@ -321,6 +322,7 @@ export function ExpenseSpreadsheet({
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Плащане</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Източник</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Статус</th>
+              <th className="px-2 py-1.5 w-8"></th>
             </tr>
           </thead>
           <tbody>
@@ -459,13 +461,14 @@ export function ExpenseSpreadsheet({
                           : 'Запази'}
                   </button>
                 </td>
+                <td />
               </tr>
             )}
 
             {expenses.length === 0 && !canCreate && (
               <tr>
                 <td
-                  colSpan={isCO ? 11 : 10}
+                  colSpan={isCO ? 12 : 11}
                   className="px-2 py-8 text-center text-muted-foreground"
                 >
                   Няма разходи
@@ -514,6 +517,21 @@ export function ExpenseSpreadsheet({
                     {statusLabels[expense.status]}
                   </Badge>
                 </td>
+                <td className="px-2 py-1 text-right">
+                  {isCO && !['PAID', 'PARTIAL', 'REJECTED'].includes(expense.status) && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        router.push(`/finance/expenses/${expense.id}/edit`)
+                      }}
+                      className="p-1 rounded hover:bg-muted text-primary"
+                      title="Редактирай"
+                    >
+                      <Pencil className="h-3 w-3" />
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
 
@@ -535,7 +553,7 @@ export function ExpenseSpreadsheet({
                 <td className="px-2 py-1.5 text-right font-mono text-xs">
                   {totalAmount.toFixed(2)}
                 </td>
-                <td colSpan={3} />
+                <td colSpan={4} />
               </tr>
             )}
           </tbody>
