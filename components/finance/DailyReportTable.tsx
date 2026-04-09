@@ -525,7 +525,7 @@ export function DailyReportTable({
                 (report.status === 'DRAFT' || report.status === 'RETURNED') &&
                 (userRole === 'MANAGER' || userRole === 'ADMIN_CO')
               const showApprove = report.status === 'SUBMITTED' && isCO(userRole)
-              const showReturn = report.status === 'SUBMITTED' && isCO(userRole)
+              const showReturn = (report.status === 'SUBMITTED' || report.status === 'APPROVED' || report.status === 'CORRECTED') && isCO(userRole)
 
               return (
                 <tr key={report.id} className="group hover:bg-muted/30 transition-colors">

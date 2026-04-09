@@ -102,7 +102,13 @@
       "Bash(cmd.exe /c \"cd C:\\\\Users\\\\gorch\\\\Documents\\\\assistant && npx next build 2>&1\")",
       "Bash(ls /mnt/c/Users/gorch/Documents/assistant/app/\\\\\\(app\\\\\\)/chat/)",
       "Bash(find /mnt/c/Users/gorch/Documents/assistant/app -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
-      "Bash(ls \"/mnt/c/Users/gorch/Documents/assistant/app/\\(app\\)/\")"
+      "Bash(ls \"/mnt/c/Users/gorch/Documents/assistant/app/\\(app\\)/\")",
+      "WebFetch(domain:github.com)",
+      "Skill(update-config)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\gorch\\\\everything-claude-code\\\\install.ps1\" -profile full)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\gorch\\\\everything-claude-code\\\\install.ps1\" -- --profile full)",
+      "Read(//c/Users/gorch/.claude/ecc//**)",
+      "Read(//c/Users/gorch/.claude/skills//**)"
     ]
   }
 }

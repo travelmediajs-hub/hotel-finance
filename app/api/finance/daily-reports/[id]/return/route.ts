@@ -42,9 +42,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   if (!report) return NextResponse.json({ error: 'not_found' }, { status: 404 })
 
-  if (report.status !== 'SUBMITTED') {
+  if (!['SUBMITTED', 'APPROVED', 'CORRECTED'].includes(report.status)) {
     return NextResponse.json(
-      { error: 'invalid_status', message: 'Отчетът трябва да е в статус ИЗПРАТЕН' },
+      { error: 'invalid_status', message: 'Отчетът не може да бъде върнат в този статус' },
       { status: 400 }
     )
   }
