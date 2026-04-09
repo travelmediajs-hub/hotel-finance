@@ -111,8 +111,9 @@ export function ExpenseActions({
   const canReturn = isCO && status === 'SENT_TO_CO'
   const canReject = isCO && status === 'SENT_TO_CO'
   const canPay = isCO && (status === 'APPROVED' || status === 'UNPAID' || status === 'PARTIAL' || status === 'OVERDUE')
+  const canEdit = isCO && !['PAID', 'PARTIAL', 'REJECTED'].includes(status)
 
-  const hasActions = canSubmit || canApprove || canReturn || canReject || canPay
+  const hasActions = canSubmit || canApprove || canReturn || canReject || canPay || canEdit
 
   if (!hasActions) return null
 
@@ -141,6 +142,16 @@ export function ExpenseActions({
           {canPay && (
             <Button disabled={loading} onClick={() => setShowPay(true)}>
               Плати
+            </Button>
+          )}
+
+          {canEdit && (
+            <Button
+              variant="outline"
+              disabled={loading}
+              onClick={() => router.push(`/finance/expenses/${expenseId}/edit`)}
+            >
+              Редактирай
             </Button>
           )}
 

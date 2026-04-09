@@ -45,42 +45,61 @@ const paymentMethodOptions: { value: PaymentMethod; label: string }[] = [
   { value: 'OTHER', label: 'Друго' },
 ]
 
+interface InitialExpense {
+  id: string
+  account_id: string
+  supplier_id: string | null
+  supplier: string | null
+  supplier_eik: string | null
+  document_type: string
+  document_number: string | null
+  issue_date: string
+  due_date: string
+  amount_net: number
+  vat_amount: number
+  payment_method: string
+  attachment_url: string | null
+  note: string | null
+}
+
 interface Props {
   propertyId: string
   accounts: UsaliAccount[]
   suppliers?: SupplierOption[]
   userRole: UserRole
+  initialExpense?: InitialExpense
 }
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers, userRole }: Props) {
+export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers, userRole, initialExpense }: Props) {
   const isManager = userRole === 'MANAGER'
+  const isEdit = !!initialExpense
   const router = useRouter()
   const today = toDateString(new Date())
   const { isHidden } = useHiddenAccounts(propertyId)
 
-  const [accountId, setAccountId] = useState('')
-  const [supplierId, setSupplierId] = useState('')
-  const [supplier, setSupplier] = useState('')
-  const [supplierEik, setSupplierEik] = useState('')
+  const [accountId, setAccountId] = useState(initialExpense?.account_id ?? '')
+  const [supplierId, setSupplierId] = useState(initialExpense?.supplier_id ?? '')
+  const [supplier, setSupplier] = useState(initialExpense?.supplier ?? '')
+  const [supplierEik, setSupplierEik] = useState(initialExpense?.supplier_eik ?? '')
   const [suppliersList, setSuppliersList] = useState<SupplierOption[]>(initialSuppliers ?? [])
-  const [supplierSearch, setSupplierSearch] = useState('')
+  const [supplierSearch, setSupplierSearch] = useState(initialExpense?.supplier ?? '')
   const [supplierDropdown, setSupplierDropdown] = useState(false)
   const [creatingSupplier, setCreatingSupplier] = useState(false)
   const supplierRef = useRef<HTMLDivElement>(null)
-  const [documentType, setDocumentType] = useState('')
-  const [documentNumber, setDocumentNumber] = useState('')
-  const [issueDate, setIssueDate] = useState(today)
-  const [dueDate, setDueDate] = useState(today)
-  const [amountNet, setAmountNet] = useState(0)
-  const [hasVat, setHasVat] = useState(false)
-  const [vatAmount, setVatAmount] = useState(0)
-  const [paymentMethod, setPaymentMethod] = useState('')
-  const [attachmentUrl, setAttachmentUrl] = useState('')
-  const [note, setNote] = useState('')
+  const [documentType, setDocumentType] = useState(initialExpense?.document_type ?? '')
+  const [documentNumber, setDocumentNumber] = useState(initialExpense?.document_number ?? '')
+  const [issueDate, setIssueDate] = useState(initialExpense?.issue_date ?? today)
+  const [dueDate, setDueDate] = useState(initialExpense?.due_date ?? today)
+  const [amountNet, setAmountNet] = useState(Number(initialExpense?.amount_net ?? 0))
+  const [hasVat, setHasVat] = useState(Number(initialExpense?.vat_amount ?? 0) > 0)
+  const [vatAmount, setVatAmount] = useState(Number(initialExpense?.vat_amount ?? 0))
+  const [paymentMethod, setPaymentMethod] = useState(initialExpense?.payment_method ?? '')
+  const [attachmentUrl, setAttachmentUrl] = useState(initialExpense?.attachment_url ?? '')
+  const [note, setNote] = useState(initialExpense?.note ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -186,8 +205,9 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
     }
 
     try {
-      const res = await fetch('/api/finance/expenses', {
-        method: 'POST',
+      const url = isEdit ? `/api/finance/expenses/${initialExpense!.id}` : '/api/finance/expenses'
+      const res = await fetch(url, {
+        method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
@@ -204,6 +224,12 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
       }
 
       const saved = await res.json()
+
+      if (isEdit) {
+        router.push(`/finance/expenses/${saved.id}`)
+        router.refresh()
+        return
+      }
 
       if (!isDraft) {
         const submitRes = await fetch(`/api/finance/expenses/${saved.id}/submit`, {
@@ -498,12 +524,20 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
 
       {/* Бутони */}
       <div className="flex gap-3">
-        <Button disabled={loading} onClick={() => handleSave(false)}>
-          {loading ? 'Запис...' : 'Изпрати към ЦО'}
-        </Button>
-        <Button variant="outline" disabled={loading} onClick={() => handleSave(true)}>
-          {loading ? 'Запис...' : 'Запази чернова'}
-        </Button>
+        {isEdit ? (
+          <Button disabled={loading} onClick={() => handleSave(true)}>
+            {loading ? 'Запис...' : 'Запази промени'}
+          </Button>
+        ) : (
+          <>
+            <Button disabled={loading} onClick={() => handleSave(false)}>
+              {loading ? 'Запис...' : 'Изпрати към ЦО'}
+            </Button>
+            <Button variant="outline" disabled={loading} onClick={() => handleSave(true)}>
+              {loading ? 'Запис...' : 'Запази чернова'}
+            </Button>
+          </>
+        )}
         <Button variant="ghost" type="button" onClick={() => router.back()}>
           Отказ
         </Button>
