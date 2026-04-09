@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { Pencil } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -61,6 +62,7 @@ export function ExpenseList({ expenses }: Props) {
           <TableHead className="text-right">Сума</TableHead>
           <TableHead className="text-right">Остатък</TableHead>
           <TableHead>Статус</TableHead>
+          <TableHead></TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -96,6 +98,18 @@ export function ExpenseList({ expenses }: Props) {
               <Badge variant={statusVariants[expense.status]}>
                 {statusLabels[expense.status]}
               </Badge>
+            </TableCell>
+            <TableCell>
+              {!['PAID', 'PARTIAL', 'REJECTED'].includes(expense.status) && (
+                <Link
+                  href={`/finance/expenses/${expense.id}/edit`}
+                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                  title="Редактирай"
+                >
+                  <Pencil className="h-3 w-3" />
+                  Редактирай
+                </Link>
+              )}
             </TableCell>
           </TableRow>
         ))}
