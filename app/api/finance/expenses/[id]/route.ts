@@ -48,15 +48,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  // Only creator or ADMIN_CO can update
-  if (expense.created_by_id !== user.id && user.role !== 'ADMIN_CO') {
+  const isCO = user.role === 'ADMIN_CO' || user.role === 'FINANCE_CO'
+
+  // Only creator or CO roles can update
+  if (expense.created_by_id !== user.id && !isCO) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
-  // Only DRAFT or RETURNED can be edited
-  if (expense.status !== 'DRAFT' && expense.status !== 'RETURNED') {
+  // CO roles can edit until paid; others only DRAFT/RETURNED
+  const editableForCO = !['PAID', 'PARTIAL', 'REJECTED'].includes(expense.status)
+  const editableForOwner = expense.status === 'DRAFT' || expense.status === 'RETURNED'
+  if (isCO ? !editableForCO : !editableForOwner) {
     return NextResponse.json(
-      { error: 'invalid_status', message: 'Разходът може да се редактира само в статус ЧЕРНОВА или ВЪРНАТ' },
+      { error: 'invalid_status', message: 'Разходът не може да се редактира в този статус' },
       { status: 400 }
     )
   }

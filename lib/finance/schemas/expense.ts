@@ -35,7 +35,7 @@ export const submitExpenseSchema = expenseBaseSchema.refine(
 export const payExpenseSchema = z.object({
   expense_id: z.string().uuid(),
   paid_amount: z.number().positive(),
-  paid_at: z.string().date(),
+  paid_at: z.string().date().optional(),
   paid_from_cash: z.string().nullable().optional(),
   bank_account_id: z.string().uuid().nullable().optional(),
   cash_register_id: z.string().uuid().nullable().optional(),

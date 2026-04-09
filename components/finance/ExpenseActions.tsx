@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -35,10 +34,6 @@ interface CashRegisterInfo {
   name: string
 }
 
-function toDateString(d: Date): string {
-  return d.toISOString().slice(0, 10)
-}
-
 export function ExpenseActions({
   expenseId, status, userRole, isOwner, remainingAmount, paymentMethod, propertyId,
 }: Props) {
@@ -50,7 +45,6 @@ export function ExpenseActions({
   const [showReject, setShowReject] = useState(false)
   const [showPay, setShowPay] = useState(false)
   const [paidAmount, setPaidAmount] = useState(remainingAmount)
-  const [paidAt, setPaidAt] = useState(toDateString(new Date()))
   const [cashRegister, setCashRegister] = useState<CashRegisterInfo | null>(null)
   const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([])
   const [selectedBankId, setSelectedBankId] = useState<string>('')
@@ -231,14 +225,6 @@ export function ExpenseActions({
                   onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="paid_at">Дата на плащане</Label>
-                <DateInput
-                  id="paid_at"
-                  value={paidAt}
-                  onChange={(e) => setPaidAt(e.target.value)}
-                />
-              </div>
               {paymentMethod === 'CASH' && (
                 <div className="space-y-2">
                   <Label>Каса (задължително)</Label>
@@ -299,7 +285,6 @@ export function ExpenseActions({
                         : null
                   performAction('pay', {
                     paid_amount: paidAmount,
-                    paid_at: paidAt,
                     paid_from_cash: sourceLabel,
                     bank_account_id: paymentMethod === 'BANK_TRANSFER' ? selectedBankId : null,
                     cash_register_id: paymentMethod === 'CASH' ? cashRegister?.id ?? null : null,

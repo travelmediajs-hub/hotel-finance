@@ -69,7 +69,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const updateData: Record<string, unknown> = {
     paid_amount: newPaidAmount,
-    paid_at: parsed.data.paid_at,
+    paid_at: parsed.data.paid_at ?? new Date().toISOString().slice(0, 10),
     paid_by_id: user.id,
     status: newStatus,
     updated_at: new Date().toISOString(),
