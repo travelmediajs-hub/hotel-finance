@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -20,13 +20,28 @@ interface Props {
   userRole: UserRole
   isOwner: boolean
   remainingAmount: number
+  paymentMethod: 'BANK_TRANSFER' | 'CASH' | 'CARD' | 'OTHER'
+  propertyId: string
+}
+
+interface BankAccountOption {
+  id: string
+  name: string
+  iban?: string | null
+}
+
+interface CashRegisterInfo {
+  id: string
+  name: string
 }
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function ExpenseActions({ expenseId, status, userRole, isOwner, remainingAmount }: Props) {
+export function ExpenseActions({
+  expenseId, status, userRole, isOwner, remainingAmount, paymentMethod, propertyId,
+}: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -36,7 +51,36 @@ export function ExpenseActions({ expenseId, status, userRole, isOwner, remaining
   const [showPay, setShowPay] = useState(false)
   const [paidAmount, setPaidAmount] = useState(remainingAmount)
   const [paidAt, setPaidAt] = useState(toDateString(new Date()))
-  const [paidFromCash, setPaidFromCash] = useState('')
+  const [cashRegister, setCashRegister] = useState<CashRegisterInfo | null>(null)
+  const [bankAccounts, setBankAccounts] = useState<BankAccountOption[]>([])
+  const [selectedBankId, setSelectedBankId] = useState<string>('')
+  const [sourcesLoading, setSourcesLoading] = useState(false)
+
+  useEffect(() => {
+    if (!showPay) return
+    setSourcesLoading(true)
+    const load = async () => {
+      try {
+        if (paymentMethod === 'CASH') {
+          const res = await fetch(`/api/finance/cash-register?property_id=${propertyId}`)
+          if (res.ok) {
+            const json = await res.json()
+            const reg = json?.balances?.[0]
+            if (reg) setCashRegister({ id: reg.id, name: reg.name })
+          }
+        } else if (paymentMethod === 'BANK_TRANSFER') {
+          const res = await fetch('/api/finance/bank-accounts')
+          if (res.ok) {
+            const json = await res.json()
+            setBankAccounts(Array.isArray(json) ? json : [])
+          }
+        }
+      } finally {
+        setSourcesLoading(false)
+      }
+    }
+    load()
+  }, [showPay, paymentMethod, propertyId])
 
   const baseUrl = `/api/finance/expenses/${expenseId}`
 
@@ -72,7 +116,7 @@ export function ExpenseActions({ expenseId, status, userRole, isOwner, remaining
   const canApprove = isCO && status === 'SENT_TO_CO'
   const canReturn = isCO && status === 'SENT_TO_CO'
   const canReject = isCO && status === 'SENT_TO_CO'
-  const canPay = isCO && status === 'APPROVED'
+  const canPay = isCO && (status === 'APPROVED' || status === 'UNPAID' || status === 'PARTIAL' || status === 'OVERDUE')
 
   const hasActions = canSubmit || canApprove || canReturn || canReject || canPay
 
@@ -195,24 +239,72 @@ export function ExpenseActions({ expenseId, status, userRole, isOwner, remaining
                   onChange={(e) => setPaidAt(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="paid_from_cash">От каса (незадължително)</Label>
-                <Input
-                  id="paid_from_cash"
-                  value={paidFromCash}
-                  onChange={(e) => setPaidFromCash(e.target.value)}
-                  placeholder="Име на каса"
-                />
-              </div>
+              {paymentMethod === 'CASH' && (
+                <div className="space-y-2">
+                  <Label>Каса (задължително)</Label>
+                  {sourcesLoading ? (
+                    <p className="text-sm text-muted-foreground">Зареждане...</p>
+                  ) : cashRegister ? (
+                    <div className="text-sm px-3 py-2 border rounded bg-muted/30">
+                      {cashRegister.name}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-destructive">Не е намерена каса за този обект</p>
+                  )}
+                </div>
+              )}
+              {paymentMethod === 'BANK_TRANSFER' && (
+                <div className="space-y-2">
+                  <Label htmlFor="bank_account">Банкова сметка (задължително)</Label>
+                  {sourcesLoading ? (
+                    <p className="text-sm text-muted-foreground">Зареждане...</p>
+                  ) : (
+                    <select
+                      id="bank_account"
+                      className="w-full border rounded px-3 py-2 text-sm bg-background"
+                      value={selectedBankId}
+                      onChange={(e) => setSelectedBankId(e.target.value)}
+                    >
+                      <option value="">-- избери --</option>
+                      {bankAccounts.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}{b.iban ? ` (${b.iban})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+              {(paymentMethod === 'CARD' || paymentMethod === 'OTHER') && (
+                <p className="text-sm text-muted-foreground">
+                  Метод на плащане: {paymentMethod}
+                </p>
+              )}
             </div>
             <DialogFooter>
               <Button
-                disabled={loading || paidAmount <= 0}
-                onClick={() => performAction('pay', {
-                  paid_amount: paidAmount,
-                  paid_at: paidAt,
-                  paid_from_cash: paidFromCash || null,
-                })}
+                disabled={
+                  loading ||
+                  paidAmount <= 0 ||
+                  (paymentMethod === 'CASH' && !cashRegister) ||
+                  (paymentMethod === 'BANK_TRANSFER' && !selectedBankId)
+                }
+                onClick={() => {
+                  const selectedBank = bankAccounts.find((b) => b.id === selectedBankId)
+                  const sourceLabel =
+                    paymentMethod === 'CASH'
+                      ? cashRegister?.name ?? null
+                      : paymentMethod === 'BANK_TRANSFER'
+                        ? selectedBank?.name ?? null
+                        : null
+                  performAction('pay', {
+                    paid_amount: paidAmount,
+                    paid_at: paidAt,
+                    paid_from_cash: sourceLabel,
+                    bank_account_id: paymentMethod === 'BANK_TRANSFER' ? selectedBankId : null,
+                    cash_register_id: paymentMethod === 'CASH' ? cashRegister?.id ?? null : null,
+                  })
+                }}
               >
                 {loading ? 'Плащане...' : 'Потвърди плащане'}
               </Button>

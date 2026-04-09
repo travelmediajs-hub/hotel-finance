@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
   const dateTo = to || '2099-12-31'
 
   // Fetch movements from all sources
-  const [dailyRes, withdrawalRes, collectionRes, receivedRes, transitInRes, transitOutRes] = await Promise.all([
+  const [dailyRes, withdrawalRes, collectionRes, receivedRes, transitInRes, transitOutRes, expenseRes] = await Promise.all([
     // Daily reports cash
     supabase
       .from('daily_reports')
@@ -109,6 +109,18 @@ export async function GET(req: NextRequest) {
       .eq('in_transits.status', 'CLOSED')
       .gte('in_transits.start_date_time', dateFrom)
       .lte('in_transits.start_date_time', dateTo),
+
+    // Expenses paid from cash (CASH payment method, PAID or PARTIAL)
+    supabase
+      .from('expenses')
+      .select('id, paid_at, paid_amount, supplier, document_number, note, suppliers(name)')
+      .eq('property_id', propertyId)
+      .eq('payment_method', 'CASH')
+      .in('status', ['PAID', 'PARTIAL'])
+      .not('paid_at', 'is', null)
+      .gte('paid_at', dateFrom)
+      .lte('paid_at', dateTo)
+      .order('paid_at', { ascending: false }),
   ])
 
   // Build unified movements list
@@ -198,6 +210,20 @@ export async function GET(req: NextRequest) {
       income: null,
       expense: Number(ts.amount),
       reference_id: it.id,
+    })
+  }
+
+  // Expenses paid from cash
+  for (const e of expenseRes.data ?? []) {
+    const supplierName = (e as { suppliers?: { name?: string } | null }).suppliers?.name ?? e.supplier ?? '—'
+    const docPart = e.document_number ? ` #${e.document_number}` : ''
+    movements.push({
+      date: typeof e.paid_at === 'string' ? e.paid_at.split('T')[0] : e.paid_at,
+      type: 'expense_cash',
+      description: `Разход в брой: ${supplierName}${docPart}${e.note ? ' — ' + e.note : ''}`,
+      income: null,
+      expense: Number(e.paid_amount),
+      reference_id: e.id,
     })
   }
 

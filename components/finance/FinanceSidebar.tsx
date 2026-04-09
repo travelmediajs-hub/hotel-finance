@@ -61,28 +61,58 @@ interface Props {
   userRole: UserRole
   realRole: UserRole
   isSimulating: boolean
+  allProperties?: { id: string; name: string }[]
+  simulatedPropertyId?: string | null
 }
 
-export function FinanceSidebar({ userFullName, userRole, realRole, isSimulating }: Props) {
+export function FinanceSidebar({
+  userFullName, userRole, realRole, isSimulating,
+  allProperties = [], simulatedPropertyId = null,
+}: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [switching, setSwitching] = useState(false)
+  const [pendingRole, setPendingRole] = useState<UserRole | null>(null)
+  const [pickProperty, setPickProperty] = useState<string>(simulatedPropertyId ?? '')
 
   const visibleItems = navItems.filter(item => item.roles.includes(userRole))
+  const needsProperty = (r: UserRole) => r === 'MANAGER' || r === 'DEPT_HEAD'
 
-  async function switchRole(newRole: string) {
-    if (!newRole) return
+  async function postSimulate(role: string, propertyId: string | null) {
     setSwitching(true)
     try {
       await fetch('/api/finance/simulate-role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: newRole }),
+        body: JSON.stringify({ role, property_id: propertyId }),
       })
       router.refresh()
     } finally {
       setSwitching(false)
     }
+  }
+
+  async function switchRole(newRole: string) {
+    if (!newRole) return
+    const role = newRole as UserRole
+    if (needsProperty(role)) {
+      // Open the property picker and defer the switch
+      setPendingRole(role)
+      setPickProperty(simulatedPropertyId ?? allProperties[0]?.id ?? '')
+      return
+    }
+    await postSimulate(newRole, null)
+  }
+
+  async function confirmPropertyPick() {
+    if (!pendingRole || !pickProperty) return
+    await postSimulate(pendingRole, pickProperty)
+    setPendingRole(null)
+  }
+
+  async function changeSimulatedProperty(propertyId: string) {
+    if (!propertyId || propertyId === simulatedPropertyId) return
+    await postSimulate(userRole, propertyId)
   }
 
   return (
@@ -123,6 +153,70 @@ export function FinanceSidebar({ userFullName, userRole, realRole, isSimulating 
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Pending property pick when switching to MANAGER/DEPT_HEAD */}
+            {pendingRole && (
+              <div className="mt-2 space-y-1.5 p-2 border border-amber-500/30 rounded bg-amber-500/5">
+                <p className="text-[10px] text-amber-500">
+                  Избери обект за {roleLabels[pendingRole]}
+                </p>
+                <Select
+                  value={pickProperty}
+                  onValueChange={(v) => v && setPickProperty(v)}
+                  disabled={switching}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="-- обект --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allProperties.map(p => (
+                      <SelectItem key={p.id} value={p.id} className="text-xs">
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="flex gap-1">
+                  <button
+                    className="flex-1 text-[10px] px-2 py-1 rounded bg-primary text-primary-foreground disabled:opacity-50"
+                    disabled={switching || !pickProperty}
+                    onClick={confirmPropertyPick}
+                  >
+                    Потвърди
+                  </button>
+                  <button
+                    className="text-[10px] px-2 py-1 rounded border"
+                    disabled={switching}
+                    onClick={() => setPendingRole(null)}
+                  >
+                    Откажи
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Change property while already simulating MANAGER/DEPT_HEAD */}
+            {!pendingRole && isSimulating && needsProperty(userRole) && allProperties.length > 0 && (
+              <div className="mt-2">
+                <p className="text-[10px] text-muted-foreground mb-1">Обект</p>
+                <Select
+                  value={simulatedPropertyId ?? ''}
+                  onValueChange={(v) => v && changeSimulatedProperty(v)}
+                  disabled={switching}
+                >
+                  <SelectTrigger className="h-7 text-xs">
+                    <SelectValue placeholder="-- избери обект --" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allProperties.map(p => (
+                      <SelectItem key={p.id} value={p.id} className="text-xs">
+                        {p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
           <Separator className="bg-border" />
         </>

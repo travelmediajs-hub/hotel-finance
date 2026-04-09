@@ -438,24 +438,26 @@ export function ExpenseSpreadsheet({
                   )}
                 </td>
                 <td className="px-1 py-1 whitespace-nowrap">
-                  <div className="flex gap-1">
-                    <button
-                      disabled={loading}
-                      onClick={() => handleSave(false)}
-                      className="px-2 py-0.5 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 whitespace-nowrap"
-                    >
-                      {loading ? '...' : 'Запази'}
-                    </button>
-                    {!isCO && (
-                      <button
-                        disabled={loading}
-                        onClick={() => handleSave(true)}
-                        className="px-2 py-0.5 text-xs rounded border border-border hover:bg-muted disabled:opacity-50 whitespace-nowrap"
-                      >
-                        {loading ? '...' : 'Изпрати'}
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    disabled={loading}
+                    onClick={() => handleSave(false)}
+                    className="px-2 py-0.5 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 whitespace-nowrap"
+                    title={
+                      newRow.payment_method === 'CASH'
+                        ? 'Записва и маркира като платен от касата'
+                        : newRow.payment_method === 'BANK_TRANSFER'
+                          ? 'Записва и изпраща към ЦО за плащане'
+                          : 'Запази'
+                    }
+                  >
+                    {loading
+                      ? '...'
+                      : newRow.payment_method === 'CASH'
+                        ? 'Плати от каса'
+                        : newRow.payment_method === 'BANK_TRANSFER'
+                          ? 'Изпрати към ЦО'
+                          : 'Запази'}
+                  </button>
                 </td>
               </tr>
             )}

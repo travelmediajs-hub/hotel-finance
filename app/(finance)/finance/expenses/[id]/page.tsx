@@ -40,6 +40,8 @@ export default async function ExpenseDetailPage({
         userRole={user.role}
         isOwner={isOwner}
         remainingAmount={expense.remaining_amount}
+        paymentMethod={expense.payment_method}
+        propertyId={expense.property_id}
       />
     </div>
   )

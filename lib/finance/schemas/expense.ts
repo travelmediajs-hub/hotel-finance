@@ -37,4 +37,6 @@ export const payExpenseSchema = z.object({
   paid_amount: z.number().positive(),
   paid_at: z.string().date(),
   paid_from_cash: z.string().nullable().optional(),
+  bank_account_id: z.string().uuid().nullable().optional(),
+  cash_register_id: z.string().uuid().nullable().optional(),
 })

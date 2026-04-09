@@ -120,7 +120,7 @@ export function DailyReportDrawer({
           z_attachment_url: l.z_attachment_url || null,
           pos_report_amount: l.pos_report_amount,
         })),
-        diff_explanation: diffExplanation || null,
+        diff_explanation: hasDiff ? (diffExplanation || null) : null,
         general_attachment_url: generalAttachment || null,
       })
     } catch {
@@ -133,6 +133,7 @@ export function DailyReportDrawer({
   const totalCashDiff = lines.reduce((s, l) => s + l.cash_diff, 0)
   const totalPosDiff = lines.reduce((s, l) => s + l.pos_diff, 0)
   const totalDiff = totalCashDiff + totalPosDiff
+  const hasDiff = Math.abs(totalDiff) > 0.005
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -264,7 +265,7 @@ export function DailyReportDrawer({
           </div>
 
           {/* Extra fields */}
-          {canEdit && totalDiff !== 0 && (
+          {canEdit && hasDiff && (
             <div className="space-y-2">
               <Label className="text-sm">Обяснение за разликата *</Label>
               <Textarea

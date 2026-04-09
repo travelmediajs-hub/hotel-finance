@@ -40,9 +40,24 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  if (expense.status !== 'APPROVED' && expense.status !== 'PARTIAL') {
+  const payableStatuses = ['APPROVED', 'PARTIAL', 'UNPAID', 'OVERDUE']
+  if (!payableStatuses.includes(expense.status)) {
     return NextResponse.json(
-      { error: 'invalid_status', message: 'Разходът трябва да е в статус ОДОБРЕН или ЧАСТИЧНО ПЛАТЕН' },
+      { error: 'invalid_status', message: 'Разходът не е в състояние, което позволява плащане' },
+      { status: 400 }
+    )
+  }
+
+  // Enforce payment source based on expense payment method
+  if (expense.payment_method === 'CASH' && !parsed.data.cash_register_id) {
+    return NextResponse.json(
+      { error: 'missing_source', message: 'Касата е задължителна при плащане в брой' },
+      { status: 400 }
+    )
+  }
+  if (expense.payment_method === 'BANK_TRANSFER' && !parsed.data.bank_account_id) {
+    return NextResponse.json(
+      { error: 'missing_source', message: 'Банковата сметка е задължителна при банков превод' },
       { status: 400 }
     )
   }

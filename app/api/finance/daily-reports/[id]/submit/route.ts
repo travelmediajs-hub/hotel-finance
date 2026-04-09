@@ -53,7 +53,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   }
 
   // diff_explanation required if total_diff != 0
-  if (Number(report.total_diff) !== 0 && !report.diff_explanation && !bodyData.diff_explanation) {
+  if (Math.abs(Number(report.total_diff)) > 0.005 && !report.diff_explanation && !bodyData.diff_explanation) {
     return NextResponse.json(
       { error: 'validation_error', message: 'Обяснение за разликата е задължително' },
       { status: 400 }

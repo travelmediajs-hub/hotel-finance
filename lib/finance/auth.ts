@@ -6,6 +6,7 @@ import { isCORole } from './roles'
 export { isCORole } from './roles'
 
 export const SIMULATE_ROLE_COOKIE = 'finance_simulate_role'
+export const SIMULATE_PROPERTY_COOKIE = 'finance_simulate_property'
 const VALID_ROLES: UserRole[] = ['ADMIN_CO', 'FINANCE_CO', 'MANAGER', 'DEPT_HEAD']
 
 export interface FinanceUser {
@@ -85,8 +86,13 @@ export async function getUserPropertyIds(
   // CO roles see everything
   if (isCORole(user.role)) return null
 
-  // Simulating non-CO role → return all active property IDs
+  // Simulating non-CO role → scope to the chosen property if set
   if (user.isSimulating) {
+    const cookieStore = await cookies()
+    const propCookie = cookieStore.get(SIMULATE_PROPERTY_COOKIE)
+    if (propCookie?.value) {
+      return [propCookie.value]
+    }
     const supabase = await createClient()
     const { data } = await supabase
       .from('properties')
