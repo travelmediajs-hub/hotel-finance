@@ -46,12 +46,14 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createClient()
 
-  const { authorized_person_id, fiscal_device_id, pos_terminal_id, sort_order, ...requiredFields } = parsed.data
+  const { authorized_person_id, fiscal_device_id, pos_terminal_id, sort_order, kind, ...requiredFields } = parsed.data
   const insertData: Record<string, unknown> = { ...requiredFields }
   if (authorized_person_id) insertData.authorized_person_id = authorized_person_id
   if (fiscal_device_id) insertData.fiscal_device_id = fiscal_device_id
   if (pos_terminal_id) insertData.pos_terminal_id = pos_terminal_id
   if (sort_order !== undefined) insertData.sort_order = sort_order
+  // Infer kind: a department with a fiscal device or POS terminal is a revenue point
+  insertData.kind = kind ?? (fiscal_device_id || pos_terminal_id ? 'REVENUE' : 'EXPENSE')
 
   const { data, error } = await supabase
     .from('departments')

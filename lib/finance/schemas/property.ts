@@ -53,6 +53,7 @@ export const createDepartmentSchema = z.object({
   fiscal_device_id: z.string().uuid().nullable().optional(),
   pos_terminal_id: z.string().uuid().nullable().optional(),
   sort_order: z.number().int().min(0).optional(),
+  kind: z.enum(['REVENUE', 'EXPENSE']).optional(),
 })
 
 export const updateDepartmentSchema = createDepartmentSchema.omit({ property_id: true }).partial()

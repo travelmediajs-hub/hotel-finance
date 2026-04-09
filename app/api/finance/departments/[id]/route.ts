@@ -32,6 +32,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if ('fiscal_device_id' in parsed.data) updateData.fiscal_device_id = parsed.data.fiscal_device_id ?? null
   if ('pos_terminal_id' in parsed.data) updateData.pos_terminal_id = parsed.data.pos_terminal_id ?? null
   if ('sort_order' in parsed.data) updateData.sort_order = parsed.data.sort_order ?? 0
+  if ('kind' in parsed.data && parsed.data.kind) {
+    updateData.kind = parsed.data.kind
+  } else if ('fiscal_device_id' in parsed.data || 'pos_terminal_id' in parsed.data) {
+    // Auto-update kind based on POS/fiscal assignment
+    updateData.kind = (parsed.data.fiscal_device_id || parsed.data.pos_terminal_id) ? 'REVENUE' : 'EXPENSE'
+  }
 
   const { data, error } = await supabase
     .from('departments')
