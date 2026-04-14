@@ -81,20 +81,49 @@ export async function POST(request: NextRequest) {
 
   const { email, password, full_name, phone, role: roleKey, property_ids } = parsed.data
 
+  let newUserId: string
+
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
     user_metadata: { full_name },
   })
-  if (createError || !created?.user) {
-    return NextResponse.json(
-      { error: 'create_failed', message: createError?.message ?? 'Неуспешно създаване' },
-      { status: 400 }
-    )
-  }
 
-  const newUserId = created.user.id
+  if (createError) {
+    // If user already exists in auth, find them and update password
+    if (createError.message?.includes('already been registered') || createError.status === 422) {
+      const { data: { users } } = await admin.auth.admin.listUsers()
+      const existing = users?.find((u) => u.email === email)
+      if (!existing) {
+        return NextResponse.json(
+          { error: 'create_failed', message: 'Потребителят съществува, но не може да бъде намерен' },
+          { status: 400 },
+        )
+      }
+      newUserId = existing.id
+      // Update password for existing auth user
+      const { error: pwError } = await admin.auth.admin.updateUserById(newUserId, { password })
+      if (pwError) {
+        return NextResponse.json(
+          { error: 'password_error', message: pwError.message },
+          { status: 400 },
+        )
+      }
+    } else {
+      return NextResponse.json(
+        { error: 'create_failed', message: createError.message ?? 'Неуспешно създаване' },
+        { status: 400 },
+      )
+    }
+  } else if (!created?.user) {
+    return NextResponse.json(
+      { error: 'create_failed', message: 'Неуспешно създаване' },
+      { status: 400 },
+    )
+  } else {
+    newUserId = created.user.id
+  }
 
   const { error: profileError } = await admin.from('user_profiles').upsert(
     {
