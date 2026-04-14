@@ -5,8 +5,9 @@ import { getFinanceUser } from '@/lib/finance/auth'
 import { hasPermission } from '@/lib/finance/permissions'
 import { z } from 'zod'
 
-const inviteSchema = z.object({
+const createUserSchema = z.object({
   email: z.string().email(),
+  password: z.string().min(6).max(100),
   full_name: z.string().min(1).max(200),
   phone: z.string().max(20).optional().nullable(),
   role: z.string().min(1),
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json()
-  const parsed = inviteSchema.safeParse(body)
+  const parsed = createUserSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: 'validation_error', details: parsed.error.flatten() }, { status: 400 })
   }
@@ -78,21 +79,22 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { email, full_name, phone, role: roleKey, property_ids } = parsed.data
+  const { email, password, full_name, phone, role: roleKey, property_ids } = parsed.data
 
-  const redirectTo = `${request.nextUrl.origin}/auth/login`
-  const { data: invited, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo,
-    data: { full_name },
+  const { data: created, error: createError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name },
   })
-  if (inviteError || !invited?.user) {
+  if (createError || !created?.user) {
     return NextResponse.json(
-      { error: 'invite_failed', message: inviteError?.message ?? 'Неуспешна покана' },
+      { error: 'create_failed', message: createError?.message ?? 'Неуспешно създаване' },
       { status: 400 }
     )
   }
 
-  const newUserId = invited.user.id
+  const newUserId = created.user.id
 
   const { error: profileError } = await admin.from('user_profiles').upsert(
     {

@@ -11,6 +11,7 @@ const updateSchema = z.object({
   role: z.string().min(1).optional(),
   is_active: z.boolean().optional(),
   property_ids: z.array(z.string().uuid()).optional(),
+  password: z.string().min(6).max(100).optional(),
 })
 
 interface RouteParams {
@@ -51,7 +52,26 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   const supabase = await createClient()
-  const { property_ids, ...profileUpdate } = parsed.data
+  const { property_ids, password, ...profileUpdate } = parsed.data
+
+  if (password) {
+    let admin
+    try {
+      admin = createAdminClient()
+    } catch {
+      return NextResponse.json(
+        { error: 'service_role_missing', message: 'SUPABASE_SERVICE_ROLE_KEY не е конфигуриран' },
+        { status: 500 },
+      )
+    }
+    const { error: pwError } = await admin.auth.admin.updateUserById(id, { password })
+    if (pwError) {
+      return NextResponse.json(
+        { error: 'password_error', message: pwError.message },
+        { status: 400 },
+      )
+    }
+  }
 
   if (Object.keys(profileUpdate).length > 0) {
     // Verify role exists if being changed

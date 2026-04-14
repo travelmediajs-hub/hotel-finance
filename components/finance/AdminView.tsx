@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Save, Trash2, UserPlus } from 'lucide-react'
+import { Plus, Save, Trash2, UserPlus, KeyRound } from 'lucide-react'
 import type { PermissionRow, RoleRow } from '@/lib/finance/permissions'
 
 interface UserRow {
@@ -78,6 +78,8 @@ function UsersTab({
 }: Props) {
   const router = useRouter()
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [pwUserId, setPwUserId] = useState<string | null>(null)
+  const [pwUserName, setPwUserName] = useState('')
 
   async function toggleActive(u: UserRow) {
     if (u.id === currentUserId) return
@@ -114,9 +116,9 @@ function UsersTab({
         {canUsersManage && (
           <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
             <Button size="sm" className="h-7 text-xs" onClick={() => setInviteOpen(true)}>
-              <UserPlus className="h-3.5 w-3.5 mr-1" /> Покани
+              <UserPlus className="h-3.5 w-3.5 mr-1" /> Създай
             </Button>
-            <InviteDialog
+            <CreateUserDialog
               roles={roles}
               properties={properties}
               onDone={() => {
@@ -188,14 +190,28 @@ function UsersTab({
                 </td>
                 <td className="px-2 py-1.5">
                   {canUsersManage && u.id !== currentUserId && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-6 text-[10px] px-2"
-                      onClick={() => toggleActive(u)}
-                    >
-                      {u.is_active ? 'Деактивирай' : 'Активирай'}
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 text-[10px] px-2"
+                        onClick={() => toggleActive(u)}
+                      >
+                        {u.is_active ? 'Деактивирай' : 'Активирай'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 text-[10px] px-1.5"
+                        title="Смени парола"
+                        onClick={() => {
+                          setPwUserId(u.id)
+                          setPwUserName(u.full_name)
+                        }}
+                      >
+                        <KeyRound className="h-3 w-3" />
+                      </Button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -210,11 +226,83 @@ function UsersTab({
           </tbody>
         </table>
       </div>
+
+      <Dialog open={!!pwUserId} onOpenChange={(open) => { if (!open) setPwUserId(null) }}>
+        <ResetPasswordDialog
+          userId={pwUserId}
+          userName={pwUserName}
+          onDone={() => setPwUserId(null)}
+        />
+      </Dialog>
     </div>
   )
 }
 
-function InviteDialog({
+function ResetPasswordDialog({
+  userId, userName, onDone,
+}: {
+  userId: string | null
+  userName: string
+  onDone: () => void
+}) {
+  const [password, setPassword] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function submit() {
+    if (!userId || password.length < 6) return
+    setSaving(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/finance/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      const body = await res.json()
+      if (!res.ok) {
+        setError(body.message ?? 'Грешка')
+        return
+      }
+      setPassword('')
+      onDone()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <DialogContent className="max-w-sm">
+      <DialogHeader>
+        <DialogTitle>Смени парола на {userName}</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-3 text-xs">
+        <div>
+          <Label className="text-xs">Нова парола</Label>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="h-8 text-xs"
+            placeholder="Мин. 6 символа"
+          />
+        </div>
+        {error && <p className="text-xs text-red-500">{error}</p>}
+      </div>
+      <DialogFooter>
+        <Button
+          size="sm"
+          onClick={submit}
+          disabled={saving || password.length < 6}
+        >
+          {saving ? 'Запазване...' : 'Смени'}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  )
+}
+
+function CreateUserDialog({
   roles, properties, onDone,
 }: {
   roles: RoleRow[]
@@ -222,6 +310,7 @@ function InviteDialog({
   onDone: () => void
 }) {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [roleKey, setRoleKey] = useState(roles[0]?.key ?? '')
@@ -246,6 +335,7 @@ function InviteDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
+          password,
           full_name: fullName,
           phone: phone || null,
           role: roleKey,
@@ -266,7 +356,7 @@ function InviteDialog({
   return (
     <DialogContent className="max-w-md">
       <DialogHeader>
-        <DialogTitle>Покани нов потребител</DialogTitle>
+        <DialogTitle>Създай нов потребител</DialogTitle>
       </DialogHeader>
       <div className="space-y-3 text-xs">
         <div>
@@ -276,6 +366,16 @@ function InviteDialog({
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="h-8 text-xs"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Парола</Label>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="h-8 text-xs"
+            placeholder="Мин. 6 символа"
           />
         </div>
         <div>
@@ -332,9 +432,9 @@ function InviteDialog({
         <Button
           size="sm"
           onClick={submit}
-          disabled={saving || !email || !fullName || !roleKey}
+          disabled={saving || !email || !password || password.length < 6 || !fullName || !roleKey}
         >
-          {saving ? 'Изпращане...' : 'Изпрати покана'}
+          {saving ? 'Създаване...' : 'Създай'}
         </Button>
       </DialogFooter>
     </DialogContent>

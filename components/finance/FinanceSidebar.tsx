@@ -19,7 +19,7 @@ import {
 import {
   Building2, LayoutDashboard, FileText, FileCheck, Receipt, Wallet,
   Landmark, ArrowRightLeft, TrendingUp,
-  CalendarDays, Eye, Package, BookOpen, BarChart3, Users, Shield,
+  CalendarDays, Eye, Package, BookOpen, BarChart3, Users, Shield, KeyRound,
 } from 'lucide-react'
 import { ThemeToggle } from '@/components/theme-toggle'
 import type { UserRole } from '@/types/finance'
@@ -272,6 +272,13 @@ export function FinanceSidebar({
             {roleLabels[userRole]}
           </Badge>
         </div>
+        <Link
+          href="/finance/change-password"
+          className="text-muted-foreground hover:text-foreground transition-colors"
+          title="Смяна на парола"
+        >
+          <KeyRound className="h-4 w-4" />
+        </Link>
       </div>
     </div>
   )
