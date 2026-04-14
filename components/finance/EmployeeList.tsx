@@ -12,24 +12,19 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Pencil, Plus, Power } from 'lucide-react'
-import type { Employee } from '@/components/finance/PayrollView'
-
-interface Department {
-  id: string
-  name: string
-  property_id: string
-}
+import type { Employee, UsaliDepartment } from '@/components/finance/PayrollView'
 
 interface Props {
   employees: Employee[]
-  departments: Department[]
+  usaliDepartments: UsaliDepartment[]
   propertyId: string
   onChanged: () => void
 }
 
 interface FormState {
   full_name: string
-  department_id: string
+  position: string
+  usali_department_id: string
   actual_salary: string
   contract_salary: string
   contract_hours_per_day: string
@@ -37,13 +32,14 @@ interface FormState {
 
 const emptyForm: FormState = {
   full_name: '',
-  department_id: '',
+  position: '',
+  usali_department_id: '',
   actual_salary: '',
   contract_salary: '',
   contract_hours_per_day: '8',
 }
 
-export function EmployeeList({ employees, departments, propertyId, onChanged }: Props) {
+export function EmployeeList({ employees, usaliDepartments, propertyId, onChanged }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -61,7 +57,8 @@ export function EmployeeList({ employees, departments, propertyId, onChanged }: 
     setEditId(emp.id)
     setForm({
       full_name: emp.full_name,
-      department_id: emp.department_id,
+      position: emp.position ?? '',
+      usali_department_id: emp.usali_department_id ?? '',
       actual_salary: String(emp.actual_salary),
       contract_salary: String(emp.contract_salary),
       contract_hours_per_day: String(emp.contract_hours_per_day),
@@ -76,7 +73,8 @@ export function EmployeeList({ employees, departments, propertyId, onChanged }: 
     try {
       const payload = {
         full_name: form.full_name,
-        department_id: form.department_id,
+        position: form.position || null,
+        usali_department_id: form.usali_department_id,
         actual_salary: parseFloat(form.actual_salary) || 0,
         contract_salary: parseFloat(form.contract_salary) || 0,
         contract_hours_per_day: parseInt(form.contract_hours_per_day, 10) || 8,
@@ -130,7 +128,8 @@ export function EmployeeList({ employees, departments, propertyId, onChanged }: 
           <thead className="bg-muted">
             <tr className="text-left">
               <th className="px-2 py-1.5">Име</th>
-              <th className="px-2 py-1.5">Отдел</th>
+              <th className="px-2 py-1.5">Длъжност</th>
+              <th className="px-2 py-1.5">USALI Отдел</th>
               <th className="px-2 py-1.5 text-right">Заплата</th>
               <th className="px-2 py-1.5 text-right">По договор</th>
               <th className="px-2 py-1.5 text-center">Ч/ден</th>
@@ -143,7 +142,10 @@ export function EmployeeList({ employees, departments, propertyId, onChanged }: 
               <tr key={emp.id} className="border-t border-border hover:bg-muted/30">
                 <td className="px-2 py-1.5 font-medium">{emp.full_name}</td>
                 <td className="px-2 py-1.5 text-muted-foreground">
-                  {emp.departments?.name ?? '—'}
+                  {emp.position ?? '—'}
+                </td>
+                <td className="px-2 py-1.5 text-muted-foreground">
+                  {emp.usali_department_templates?.name ?? '—'}
                 </td>
                 <td className="px-2 py-1.5 text-right tabular-nums">
                   {emp.actual_salary.toFixed(2)}
@@ -191,7 +193,7 @@ export function EmployeeList({ employees, departments, propertyId, onChanged }: 
             ))}
             {employees.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-2 py-4 text-center text-muted-foreground">
+                <td colSpan={8} className="px-2 py-4 text-center text-muted-foreground">
                   Няма служители
                 </td>
               </tr>
@@ -216,16 +218,25 @@ export function EmployeeList({ employees, departments, propertyId, onChanged }: 
               />
             </div>
             <div>
-              <Label className="text-xs">Отдел</Label>
+              <Label className="text-xs">Длъжност</Label>
+              <Input
+                value={form.position}
+                onChange={(e) => setForm({ ...form, position: e.target.value })}
+                className="h-8 text-xs"
+                placeholder="напр. Рецепционист, Готвач..."
+              />
+            </div>
+            <div>
+              <Label className="text-xs">USALI Отдел</Label>
               <Select
-                value={form.department_id}
-                onValueChange={(v) => v && setForm({ ...form, department_id: v })}
+                value={form.usali_department_id}
+                onValueChange={(v) => v && setForm({ ...form, usali_department_id: v })}
               >
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue placeholder="Избери отдел" />
                 </SelectTrigger>
                 <SelectContent>
-                  {departments.map((d) => (
+                  {usaliDepartments.map((d) => (
                     <SelectItem key={d.id} value={d.id} className="text-xs">
                       {d.name}
                     </SelectItem>
@@ -268,7 +279,7 @@ export function EmployeeList({ employees, departments, propertyId, onChanged }: 
             <Button
               size="sm"
               onClick={handleSave}
-              disabled={saving || !form.full_name || !form.department_id}
+              disabled={saving || !form.full_name || !form.usali_department_id}
             >
               {saving ? 'Запазване...' : editId ? 'Запази' : 'Добави'}
             </Button>

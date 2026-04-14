@@ -31,12 +31,11 @@ export default async function PayrollPage() {
     }
   }
 
-  // Departments for employee create/edit
-  const { data: departments } = await supabase
-    .from('departments')
-    .select('id, name, property_id')
-    .eq('status', 'ACTIVE')
-    .order('name')
+  // USALI departments for employee classification
+  const { data: usaliDepts } = await supabase
+    .from('usali_department_templates')
+    .select('id, code, name')
+    .order('sort_order')
 
   const defaultPropertyId = properties[0]?.id ?? null
 
@@ -44,7 +43,7 @@ export default async function PayrollPage() {
     <div className="p-4 max-w-[1600px] mx-auto">
       <PayrollView
         properties={properties}
-        departments={departments ?? []}
+        usaliDepartments={usaliDepts ?? []}
         defaultPropertyId={defaultPropertyId}
         userRole={user.role}
       />

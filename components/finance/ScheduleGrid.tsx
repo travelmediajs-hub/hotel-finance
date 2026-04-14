@@ -117,7 +117,12 @@ function CellPopover({ entry, employeeId, dateStr, onSave }: CellPopoverProps) {
 
   const displayStatus = entry?.status
   const cellContent = displayStatus ? statusLabels[displayStatus] : ''
-  const cellColor = displayStatus ? statusColors[displayStatus] : ''
+  const hasOvertime = entry?.status === 'WORK' && (entry.overtime_hours ?? 0) > 0
+  const cellColor = hasOvertime
+    ? 'bg-red-500/20 text-red-700 dark:text-red-400'
+    : displayStatus
+      ? statusColors[displayStatus]
+      : ''
 
   return (
     <Popover open={open} onOpenChange={handleOpen}>

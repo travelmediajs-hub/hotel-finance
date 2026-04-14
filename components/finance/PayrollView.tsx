@@ -10,13 +10,14 @@ import { ScheduleGrid } from '@/components/finance/ScheduleGrid'
 export interface Employee {
   id: string
   property_id: string
-  department_id: string
+  usali_department_id: string | null
   full_name: string
+  position: string | null
   contract_salary: number
   actual_salary: number
   contract_hours_per_day: number
   is_active: boolean
-  departments: { name: string } | null
+  usali_department_templates: { code: string; name: string } | null
   properties: { name: string } | null
 }
 
@@ -29,15 +30,15 @@ export interface ScheduleEntry {
   overtime_hours: number | null
 }
 
-interface Department {
+export interface UsaliDepartment {
   id: string
+  code: string
   name: string
-  property_id: string
 }
 
 interface Props {
   properties: Array<{ id: string; name: string }>
-  departments: Department[]
+  usaliDepartments: UsaliDepartment[]
   defaultPropertyId: string | null
   userRole: string
 }
@@ -63,7 +64,7 @@ function getCurrentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
-export function PayrollView({ properties, departments, defaultPropertyId, userRole }: Props) {
+export function PayrollView({ properties, usaliDepartments, defaultPropertyId, userRole }: Props) {
   const [propertyId, setPropertyId] = useState<string>(defaultPropertyId ?? '')
   const [month, setMonth] = useState<string>(getCurrentMonth())
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -73,10 +74,6 @@ export function PayrollView({ properties, departments, defaultPropertyId, userRo
 
   const monthOptions = useMemo(() => getMonthOptions(), [])
 
-  const filteredDepartments = useMemo(
-    () => departments.filter((d) => d.property_id === propertyId),
-    [departments, propertyId],
-  )
 
   const fetchEmployees = useCallback(async () => {
     if (!propertyId) return
@@ -162,7 +159,7 @@ export function PayrollView({ properties, departments, defaultPropertyId, userRo
         <>
           <EmployeeList
             employees={employees}
-            departments={filteredDepartments}
+            usaliDepartments={usaliDepartments}
             propertyId={propertyId}
             onChanged={fetchEmployees}
           />
