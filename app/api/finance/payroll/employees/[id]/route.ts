@@ -6,7 +6,7 @@ import { z } from 'zod'
 const updateEmployeeSchema = z.object({
   full_name: z.string().min(1).max(200).optional(),
   usali_department_id: z.string().uuid().optional(),
-  position: z.string().max(200).optional().nullable(),
+  position_id: z.string().uuid().optional().nullable(),
   contract_salary: z.number().min(0).optional(),
   actual_salary: z.number().min(0).optional(),
   contract_hours_per_day: z.number().int().min(1).max(24).optional(),

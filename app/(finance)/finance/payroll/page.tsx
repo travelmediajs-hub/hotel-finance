@@ -37,6 +37,12 @@ export default async function PayrollPage() {
     .select('id, code, name')
     .order('sort_order')
 
+  // Positions
+  const { data: positionsData } = await supabase
+    .from('positions')
+    .select('id, name')
+    .order('sort_order')
+
   const defaultPropertyId = properties[0]?.id ?? null
 
   return (
@@ -44,6 +50,7 @@ export default async function PayrollPage() {
       <PayrollView
         properties={properties}
         usaliDepartments={usaliDepts ?? []}
+        positions={positionsData ?? []}
         defaultPropertyId={defaultPropertyId}
         userRole={user.role}
       />

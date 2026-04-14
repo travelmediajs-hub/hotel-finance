@@ -11,13 +11,14 @@ export interface Employee {
   id: string
   property_id: string
   usali_department_id: string | null
+  position_id: string | null
   full_name: string
-  position: string | null
   contract_salary: number
   actual_salary: number
   contract_hours_per_day: number
   is_active: boolean
   usali_department_templates: { code: string; name: string } | null
+  positions: { name: string } | null
   properties: { name: string } | null
 }
 
@@ -36,9 +37,15 @@ export interface UsaliDepartment {
   name: string
 }
 
+export interface Position {
+  id: string
+  name: string
+}
+
 interface Props {
   properties: Array<{ id: string; name: string }>
   usaliDepartments: UsaliDepartment[]
+  positions: Position[]
   defaultPropertyId: string | null
   userRole: string
 }
@@ -64,7 +71,7 @@ function getCurrentMonth(): string {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
-export function PayrollView({ properties, usaliDepartments, defaultPropertyId, userRole }: Props) {
+export function PayrollView({ properties, usaliDepartments, positions, defaultPropertyId, userRole }: Props) {
   const [propertyId, setPropertyId] = useState<string>(defaultPropertyId ?? '')
   const [month, setMonth] = useState<string>(getCurrentMonth())
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -160,6 +167,7 @@ export function PayrollView({ properties, usaliDepartments, defaultPropertyId, u
           <EmployeeList
             employees={employees}
             usaliDepartments={usaliDepartments}
+            positions={positions}
             propertyId={propertyId}
             onChanged={fetchEmployees}
           />

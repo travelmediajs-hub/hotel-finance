@@ -12,18 +12,19 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Pencil, Plus, Power } from 'lucide-react'
-import type { Employee, UsaliDepartment } from '@/components/finance/PayrollView'
+import type { Employee, UsaliDepartment, Position } from '@/components/finance/PayrollView'
 
 interface Props {
   employees: Employee[]
   usaliDepartments: UsaliDepartment[]
+  positions: Position[]
   propertyId: string
   onChanged: () => void
 }
 
 interface FormState {
   full_name: string
-  position: string
+  position_id: string
   usali_department_id: string
   actual_salary: string
   contract_salary: string
@@ -32,14 +33,14 @@ interface FormState {
 
 const emptyForm: FormState = {
   full_name: '',
-  position: '',
+  position_id: '',
   usali_department_id: '',
   actual_salary: '',
   contract_salary: '',
   contract_hours_per_day: '8',
 }
 
-export function EmployeeList({ employees, usaliDepartments, propertyId, onChanged }: Props) {
+export function EmployeeList({ employees, usaliDepartments, positions, propertyId, onChanged }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(emptyForm)
@@ -57,7 +58,7 @@ export function EmployeeList({ employees, usaliDepartments, propertyId, onChange
     setEditId(emp.id)
     setForm({
       full_name: emp.full_name,
-      position: emp.position ?? '',
+      position_id: emp.position_id ?? '',
       usali_department_id: emp.usali_department_id ?? '',
       actual_salary: String(emp.actual_salary),
       contract_salary: String(emp.contract_salary),
@@ -73,7 +74,7 @@ export function EmployeeList({ employees, usaliDepartments, propertyId, onChange
     try {
       const payload = {
         full_name: form.full_name,
-        position: form.position || null,
+        position_id: form.position_id || null,
         usali_department_id: form.usali_department_id,
         actual_salary: parseFloat(form.actual_salary) || 0,
         contract_salary: parseFloat(form.contract_salary) || 0,
@@ -142,7 +143,7 @@ export function EmployeeList({ employees, usaliDepartments, propertyId, onChange
               <tr key={emp.id} className="border-t border-border hover:bg-muted/30">
                 <td className="px-2 py-1.5 font-medium">{emp.full_name}</td>
                 <td className="px-2 py-1.5 text-muted-foreground">
-                  {emp.position ?? '—'}
+                  {emp.positions?.name ?? '—'}
                 </td>
                 <td className="px-2 py-1.5 text-muted-foreground">
                   {emp.usali_department_templates?.name ?? '—'}
@@ -219,12 +220,21 @@ export function EmployeeList({ employees, usaliDepartments, propertyId, onChange
             </div>
             <div>
               <Label className="text-xs">Длъжност</Label>
-              <Input
-                value={form.position}
-                onChange={(e) => setForm({ ...form, position: e.target.value })}
-                className="h-8 text-xs"
-                placeholder="напр. Рецепционист, Готвач..."
-              />
+              <Select
+                value={form.position_id}
+                onValueChange={(v) => v && setForm({ ...form, position_id: v })}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue placeholder="Избери длъжност" />
+                </SelectTrigger>
+                <SelectContent>
+                  {positions.map((p) => (
+                    <SelectItem key={p.id} value={p.id} className="text-xs">
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-xs">USALI Отдел</Label>

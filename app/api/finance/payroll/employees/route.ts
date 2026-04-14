@@ -7,7 +7,7 @@ const createEmployeeSchema = z.object({
   property_id: z.string().uuid(),
   usali_department_id: z.string().uuid(),
   full_name: z.string().min(1).max(200),
-  position: z.string().max(200).optional().nullable(),
+  position_id: z.string().uuid().optional().nullable(),
   contract_salary: z.number().min(0),
   actual_salary: z.number().min(0),
   contract_hours_per_day: z.number().int().min(1).max(24).default(8),
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createClient()
   let query = supabase
     .from('employees')
-    .select('*, usali_department_templates(code, name), properties(name)')
+    .select('*, usali_department_templates(code, name), positions(name), properties(name)')
     .order('full_name')
 
   const propertyId = request.nextUrl.searchParams.get('property_id')
