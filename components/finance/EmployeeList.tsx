@@ -12,7 +12,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Pencil, Plus, Power } from 'lucide-react'
-import type { Employee, UsaliDepartment, Position } from '@/components/finance/PayrollView'
+import type { Employee, UsaliDepartment, Position } from '@/components/finance/payroll-types'
 
 interface Props {
   employees: Employee[]
@@ -30,7 +30,16 @@ interface FormState {
   contract_salary: string
   contract_hours_per_day: string
   contract_days_per_month: string
+  contract_type: string
+  contract_start_date: string
 }
+
+const CONTRACT_TYPES = [
+  { value: 'indefinite', label: 'Безсрочен' },
+  { value: 'fixed', label: 'Срочен' },
+  { value: 'part_time', label: 'Непълно работно време' },
+  { value: 'civil', label: 'Граждански' },
+]
 
 const emptyForm: FormState = {
   full_name: '',
@@ -40,6 +49,8 @@ const emptyForm: FormState = {
   contract_salary: '',
   contract_hours_per_day: '8',
   contract_days_per_month: '22',
+  contract_type: 'indefinite',
+  contract_start_date: '',
 }
 
 export function EmployeeList({ employees, usaliDepartments, positions, propertyId, onChanged }: Props) {
@@ -66,6 +77,8 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
       contract_salary: String(emp.contract_salary),
       contract_hours_per_day: String(emp.contract_hours_per_day),
       contract_days_per_month: String(emp.contract_days_per_month),
+      contract_type: emp.contract_type ?? 'indefinite',
+      contract_start_date: emp.contract_start_date ?? '',
     })
     setError(null)
     setDialogOpen(true)
@@ -83,6 +96,8 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
         contract_salary: parseFloat(form.contract_salary) || 0,
         contract_hours_per_day: parseInt(form.contract_hours_per_day, 10) || 8,
         contract_days_per_month: parseInt(form.contract_days_per_month, 10) || 22,
+        contract_type: form.contract_type,
+        contract_start_date: form.contract_start_date || null,
         ...(editId ? {} : { property_id: propertyId }),
       }
 
@@ -137,6 +152,8 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
               <th className="px-2 py-1.5">USALI Отдел</th>
               <th className="px-2 py-1.5 text-right">Заплата</th>
               <th className="px-2 py-1.5 text-right">По договор</th>
+              <th className="px-2 py-1.5">Тип договор</th>
+              <th className="px-2 py-1.5">От дата</th>
               <th className="px-2 py-1.5 text-center">Дни/м</th>
               <th className="px-2 py-1.5 text-center">Ч/ден</th>
               <th className="px-2 py-1.5">Статус</th>
@@ -158,6 +175,12 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
                 </td>
                 <td className="px-2 py-1.5 text-right tabular-nums">
                   {emp.contract_salary.toFixed(2)}
+                </td>
+                <td className="px-2 py-1.5 text-muted-foreground">
+                  {CONTRACT_TYPES.find((t) => t.value === emp.contract_type)?.label ?? emp.contract_type}
+                </td>
+                <td className="px-2 py-1.5 text-muted-foreground">
+                  {emp.contract_start_date ?? '—'}
                 </td>
                 <td className="px-2 py-1.5 text-center tabular-nums">
                   {emp.contract_days_per_month}
@@ -202,7 +225,7 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
             ))}
             {employees.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-2 py-4 text-center text-muted-foreground">
+                <td colSpan={11} className="px-2 py-4 text-center text-muted-foreground">
                   Няма служители
                 </td>
               </tr>
@@ -225,6 +248,35 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
                 className="h-8 text-xs"
               />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label className="text-xs">Тип договор</Label>
+                <Select
+                  value={form.contract_type}
+                  onValueChange={(v) => v && setForm({ ...form, contract_type: v })}
+                >
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CONTRACT_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value} className="text-xs">
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="text-xs">От дата</Label>
+                <Input
+                  type="date"
+                  value={form.contract_start_date}
+                  onChange={(e) => setForm({ ...form, contract_start_date: e.target.value })}
+                  className="h-8 text-xs"
+                />
+              </div>
             </div>
             <div>
               <Label className="text-xs">Длъжност</Label>

@@ -10,7 +10,7 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from '@/components/ui/popover'
-import type { Employee, ScheduleEntry } from '@/components/finance/PayrollView'
+import type { Employee, ScheduleEntry } from '@/components/finance/payroll-types'
 
 type ScheduleStatus = ScheduleEntry['status']
 
