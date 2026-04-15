@@ -108,11 +108,28 @@ function SelectLabel({
   )
 }
 
+function extractTextFromChildren(children: React.ReactNode): string | undefined {
+  if (typeof children === 'string') return children
+  if (typeof children === 'number') return String(children)
+  if (Array.isArray(children)) {
+    const parts = children.map(extractTextFromChildren).filter(Boolean)
+    return parts.length > 0 ? parts.join('') : undefined
+  }
+  if (children && typeof children === 'object' && 'props' in children) {
+    return extractTextFromChildren((children as React.ReactElement<{ children?: React.ReactNode }>).props.children)
+  }
+  return undefined
+}
+
 function SelectItem({
   className,
   children,
+  label,
   ...props
-}: SelectPrimitive.Item.Props) {
+}: SelectPrimitive.Item.Props & { label?: string }) {
+  // Base UI needs an explicit label for SelectValue to display the selected text.
+  // Auto-derive it from children when not provided.
+  const resolvedLabel = label ?? extractTextFromChildren(children)
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
@@ -120,6 +137,7 @@ function SelectItem({
         "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
+      {...(resolvedLabel ? { label: resolvedLabel } : {})}
       {...props}
     >
       <SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
