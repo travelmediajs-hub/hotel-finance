@@ -6,7 +6,22 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { cn } from "@/lib/utils"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 
-const Select = SelectPrimitive.Root
+// Context to pass value→label map from SelectItems to SelectValue
+const SelectLabelsContext = React.createContext<React.RefObject<Map<string, string>> | null>(null)
+
+function Select<Value = string, Multiple extends boolean | undefined = false>({
+  children,
+  ...props
+}: SelectPrimitive.Root.Props<Value, Multiple>) {
+  const labelsRef = React.useRef<Map<string, string>>(new Map())
+  return (
+    <SelectLabelsContext.Provider value={labelsRef}>
+      <SelectPrimitive.Root {...props}>
+        {children}
+      </SelectPrimitive.Root>
+    </SelectLabelsContext.Provider>
+  )
+}
 
 function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   return (
@@ -18,13 +33,22 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   )
 }
 
-function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+function SelectValue({ className, placeholder, ...props }: SelectPrimitive.Value.Props) {
+  const labelsRef = React.useContext(SelectLabelsContext)
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
       className={cn("flex flex-1 text-left", className)}
+      placeholder={placeholder}
       {...props}
-    />
+    >
+      {(value: unknown) => {
+        if (value == null || value === '') return placeholder ?? null
+        const labels = labelsRef?.current
+        const label = labels?.get(String(value))
+        return label ?? String(value)
+      }}
+    </SelectPrimitive.Value>
   )
 }
 
@@ -124,20 +148,28 @@ function extractTextFromChildren(children: React.ReactNode): string | undefined 
 function SelectItem({
   className,
   children,
-  label,
+  value,
   ...props
-}: SelectPrimitive.Item.Props & { label?: string }) {
-  // Base UI needs an explicit label for SelectValue to display the selected text.
-  // Auto-derive it from children when not provided.
-  const resolvedLabel = label ?? extractTextFromChildren(children)
+}: SelectPrimitive.Item.Props) {
+  const labelsRef = React.useContext(SelectLabelsContext)
+
+  // Register label in the shared map so SelectValue can look it up
+  const textLabel = extractTextFromChildren(children)
+  React.useEffect(() => {
+    const labels = labelsRef?.current
+    if (labels && value != null && textLabel) {
+      labels.set(String(value), textLabel.trim())
+    }
+  }, [labelsRef, value, textLabel])
+
   return (
     <SelectPrimitive.Item
       data-slot="select-item"
+      value={value}
       className={cn(
         "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
-      {...(resolvedLabel ? { label: resolvedLabel } : {})}
       {...props}
     >
       <SelectPrimitive.ItemText className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
