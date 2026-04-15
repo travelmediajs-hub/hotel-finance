@@ -11,6 +11,7 @@ const createEmployeeSchema = z.object({
   contract_salary: z.number().min(0),
   actual_salary: z.number().min(0),
   contract_hours_per_day: z.number().int().min(1).max(24).default(8),
+  contract_days_per_month: z.number().int().min(1).max(31).default(22),
 })
 
 export async function GET(request: NextRequest) {

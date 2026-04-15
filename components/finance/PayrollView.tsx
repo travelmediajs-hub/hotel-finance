@@ -16,6 +16,7 @@ export interface Employee {
   contract_salary: number
   actual_salary: number
   contract_hours_per_day: number
+  contract_days_per_month: number
   is_active: boolean
   usali_department_templates: { code: string; name: string } | null
   positions: { name: string } | null

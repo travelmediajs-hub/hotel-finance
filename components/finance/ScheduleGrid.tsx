@@ -28,17 +28,6 @@ function getDaysInMonth(month: string): number {
   return new Date(year, mon, 0).getDate()
 }
 
-function getBusinessDays(month: string): number {
-  const [year, mon] = month.split('-').map(Number)
-  const days = new Date(year, mon, 0).getDate()
-  let count = 0
-  for (let d = 1; d <= days; d++) {
-    const dow = new Date(year, mon - 1, d).getDay()
-    if (dow !== 0 && dow !== 6) count++
-  }
-  return count
-}
-
 function isWeekend(month: string, day: number): boolean {
   const [year, mon] = month.split('-').map(Number)
   const dow = new Date(year, mon - 1, day).getDay()
@@ -184,7 +173,6 @@ function CellPopover({ entry, employeeId, dateStr, onSave }: CellPopoverProps) {
 
 export function ScheduleGrid({ employees, schedule, month, onChanged }: Props) {
   const daysInMonth = getDaysInMonth(month)
-  const businessDays = getBusinessDays(month)
   const days = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth])
   const lookup = useMemo(() => buildLookup(schedule), [schedule])
 
@@ -217,11 +205,12 @@ export function ScheduleGrid({ employees, schedule, month, onChanged }: Props) {
       }
     }
 
-    const salary = businessDays > 0
-      ? emp.actual_salary * (workedDays / businessDays)
+    const contractDays = emp.contract_days_per_month || 22
+    const salary = contractDays > 0
+      ? emp.actual_salary * (workedDays / contractDays)
       : 0
-    const hourlyRate = businessDays > 0 && emp.contract_hours_per_day > 0
-      ? emp.actual_salary / businessDays / emp.contract_hours_per_day
+    const hourlyRate = contractDays > 0 && emp.contract_hours_per_day > 0
+      ? emp.actual_salary / contractDays / emp.contract_hours_per_day
       : 0
     const overtimePay = hourlyRate * totalOvertime * 1.5
     const total = salary + overtimePay

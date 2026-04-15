@@ -29,6 +29,7 @@ interface FormState {
   actual_salary: string
   contract_salary: string
   contract_hours_per_day: string
+  contract_days_per_month: string
 }
 
 const emptyForm: FormState = {
@@ -38,6 +39,7 @@ const emptyForm: FormState = {
   actual_salary: '',
   contract_salary: '',
   contract_hours_per_day: '8',
+  contract_days_per_month: '22',
 }
 
 export function EmployeeList({ employees, usaliDepartments, positions, propertyId, onChanged }: Props) {
@@ -63,6 +65,7 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
       actual_salary: String(emp.actual_salary),
       contract_salary: String(emp.contract_salary),
       contract_hours_per_day: String(emp.contract_hours_per_day),
+      contract_days_per_month: String(emp.contract_days_per_month),
     })
     setError(null)
     setDialogOpen(true)
@@ -79,6 +82,7 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
         actual_salary: parseFloat(form.actual_salary) || 0,
         contract_salary: parseFloat(form.contract_salary) || 0,
         contract_hours_per_day: parseInt(form.contract_hours_per_day, 10) || 8,
+        contract_days_per_month: parseInt(form.contract_days_per_month, 10) || 22,
         ...(editId ? {} : { property_id: propertyId }),
       }
 
@@ -133,6 +137,7 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
               <th className="px-2 py-1.5">USALI Отдел</th>
               <th className="px-2 py-1.5 text-right">Заплата</th>
               <th className="px-2 py-1.5 text-right">По договор</th>
+              <th className="px-2 py-1.5 text-center">Дни/м</th>
               <th className="px-2 py-1.5 text-center">Ч/ден</th>
               <th className="px-2 py-1.5">Статус</th>
               <th className="px-2 py-1.5 w-20">Действия</th>
@@ -153,6 +158,9 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
                 </td>
                 <td className="px-2 py-1.5 text-right tabular-nums">
                   {emp.contract_salary.toFixed(2)}
+                </td>
+                <td className="px-2 py-1.5 text-center tabular-nums">
+                  {emp.contract_days_per_month}
                 </td>
                 <td className="px-2 py-1.5 text-center tabular-nums">
                   {emp.contract_hours_per_day}
@@ -194,7 +202,7 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
             ))}
             {employees.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-2 py-4 text-center text-muted-foreground">
+                <td colSpan={9} className="px-2 py-4 text-center text-muted-foreground">
                   Няма служители
                 </td>
               </tr>
@@ -270,6 +278,17 @@ export function EmployeeList({ employees, usaliDepartments, positions, propertyI
                 value={form.contract_salary}
                 onChange={(e) => setForm({ ...form, contract_salary: e.target.value })}
                 className="h-8 text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Дни/месец</Label>
+              <Input
+                type="number"
+                value={form.contract_days_per_month}
+                onChange={(e) => setForm({ ...form, contract_days_per_month: e.target.value })}
+                className="h-8 text-xs"
+                min={1}
+                max={31}
               />
             </div>
             <div>
