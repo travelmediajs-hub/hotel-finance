@@ -30,6 +30,7 @@ const statusVariants: Record<ExpenseStatus, 'default' | 'secondary' | 'destructi
 
 const documentTypeLabels: Record<DocumentType, string> = {
   INVOICE: 'Фактура',
+  CREDIT_NOTE: 'Кредитно известие',
   EXPENSE_ORDER: 'Разходен ордер',
   RECEIPT: 'Касова бележка',
   NO_DOCUMENT: 'Без документ',

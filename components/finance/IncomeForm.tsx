@@ -26,6 +26,7 @@ interface UsaliAccount {
 const typeOptions: { value: IncomeEntryType; label: string }[] = [
   { value: 'INC_BANK', label: 'Банков приход' },
   { value: 'INC_CASH', label: 'Приход в брой' },
+  { value: 'INC_CREDIT_NOTE', label: 'Кредитно известие' },
   { value: 'INC_ADV', label: 'Аванс' },
   { value: 'INC_DEP', label: 'Депозит' },
   { value: 'INC_OTHER', label: 'Друг приход' },
@@ -73,8 +74,13 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
     e.preventDefault()
     setError(null)
 
-    if (!entryDate || !propertyId || !type || !paymentMethod || !payer.trim() || amount <= 0 || !accountId) {
+    const isCreditNote = type === 'INC_CREDIT_NOTE'
+    if (!entryDate || !propertyId || !type || !paymentMethod || !payer.trim() || amount === 0 || !accountId) {
       setError('Моля, попълнете всички задължителни полета.')
+      return
+    }
+    if (!isCreditNote && amount < 0) {
+      setError('Сумата трябва да е положителна (освен при кредитно известие).')
       return
     }
 
@@ -176,11 +182,10 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Сума *</Label>
+              <Label htmlFor="amount">Сума * {type === 'INC_CREDIT_NOTE' && <span className="text-xs text-orange-400">(отрицателна при КИ)</span>}</Label>
               <Input
                 id="amount"
                 type="number"
-                min={0}
                 step="0.01"
                 value={amount || ''}
                 onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}

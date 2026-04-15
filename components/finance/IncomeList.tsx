@@ -19,6 +19,7 @@ const typeLabels: Record<IncomeEntryType, string> = {
   INC_ADV: 'Аванс',
   INC_DEP: 'Депозит',
   INC_OTHER: 'Друг приход',
+  INC_CREDIT_NOTE: 'Кредитно известие',
   CF_CREDIT: 'Усвояване на кредит',
   CF_TRANSFER: 'Вътрешен трансфер',
 }

@@ -42,6 +42,7 @@ const typeLabels: Record<IncomeEntryType, string> = {
   INC_ADV: 'Аванс',
   INC_DEP: 'Депозит',
   INC_OTHER: 'Друг',
+  INC_CREDIT_NOTE: 'КИ',
   CF_CREDIT: 'Кредит',
   CF_TRANSFER: 'Трансфер',
 }
@@ -71,6 +72,7 @@ const typeOptions: { value: IncomeEntryType; label: string }[] = [
   { value: 'INC_ADV', label: 'Аванс' },
   { value: 'INC_DEP', label: 'Депозит' },
   { value: 'INC_OTHER', label: 'Друг' },
+  { value: 'INC_CREDIT_NOTE', label: 'КИ' },
   { value: 'CF_CREDIT', label: 'Кредит' },
   { value: 'CF_TRANSFER', label: 'Трансфер' },
 ]

@@ -5,9 +5,10 @@ export const createIncomeEntrySchema = z.object({
   property_id: z.string().uuid(),
   type: z.enum([
     'INC_BANK', 'INC_CASH', 'INC_ADV', 'INC_DEP', 'INC_OTHER',
+    'INC_CREDIT_NOTE',
     'CF_CREDIT', 'CF_TRANSFER',
   ]),
-  amount: z.number().positive(),
+  amount: z.number().refine(v => v !== 0, { message: 'Сумата не може да е 0' }),
   bank_account_id: z.string().uuid().nullable().optional(),
   payment_method: z.enum(['BANK', 'CASH']),
   payer: z.string().min(1),
@@ -26,9 +27,10 @@ export const updateIncomeEntrySchema = z.object({
   entry_date: z.string().date().optional(),
   type: z.enum([
     'INC_BANK', 'INC_CASH', 'INC_ADV', 'INC_DEP', 'INC_OTHER',
+    'INC_CREDIT_NOTE',
     'CF_CREDIT', 'CF_TRANSFER',
   ]).optional(),
-  amount: z.number().positive().optional(),
+  amount: z.number().refine(v => v !== 0, { message: 'Сумата не може да е 0' }).optional(),
   bank_account_id: z.string().uuid().nullable().optional(),
   payment_method: z.enum(['BANK', 'CASH']).optional(),
   payer: z.string().min(1).optional(),

@@ -16,7 +16,7 @@ export type DailyReportStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'RETURNED'
 export type ConsolidationStatus =
   | 'IN_PROGRESS' | 'SENT_TO_CO' | 'APPROVED' | 'RETURNED' | 'CORRECTED'
 
-export type DocumentType = 'INVOICE' | 'EXPENSE_ORDER' | 'RECEIPT' | 'NO_DOCUMENT'
+export type DocumentType = 'INVOICE' | 'EXPENSE_ORDER' | 'RECEIPT' | 'NO_DOCUMENT' | 'CREDIT_NOTE'
 
 export type PaymentMethod = 'BANK_TRANSFER' | 'CASH' | 'CARD' | 'OTHER'
 
@@ -69,6 +69,7 @@ export type ChainStatus = 'OPEN' | 'CLOSED'
 
 export type IncomeEntryType =
   | 'INC_BANK' | 'INC_CASH' | 'INC_ADV' | 'INC_DEP' | 'INC_OTHER'
+  | 'INC_CREDIT_NOTE'
   | 'CF_CREDIT' | 'CF_TRANSFER'
 
 export type IncomePaymentMethod = 'BANK' | 'CASH'

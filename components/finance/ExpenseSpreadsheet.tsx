@@ -21,6 +21,7 @@ export type ExpenseWithJoins = Expense & {
 
 const documentTypeLabels: Record<DocumentType, string> = {
   INVOICE: 'Фактура',
+  CREDIT_NOTE: 'КИ',
   EXPENSE_ORDER: 'Разходен ордер',
   RECEIPT: 'Касова бележка',
   NO_DOCUMENT: 'Без документ',

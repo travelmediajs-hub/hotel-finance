@@ -33,6 +33,7 @@ interface SupplierOption {
 
 const documentTypeOptions: { value: DocumentType; label: string }[] = [
   { value: 'INVOICE', label: 'Фактура' },
+  { value: 'CREDIT_NOTE', label: 'Кредитно известие' },
   { value: 'EXPENSE_ORDER', label: 'Разходен ордер' },
   { value: 'RECEIPT', label: 'Касова бележка' },
   { value: 'NO_DOCUMENT', label: 'Без документ' },
@@ -169,8 +170,13 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
   async function handleSave(isDraft: boolean) {
     setError(null)
 
-    if (!accountId || !supplierId || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet <= 0) {
+    const isCreditNote = documentType === 'CREDIT_NOTE'
+    if (!accountId || !supplierId || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet === 0) {
       setError('Моля, попълнете всички задължителни полета.')
+      return
+    }
+    if (!isCreditNote && amountNet < 0) {
+      setError('Сумата трябва да е положителна (освен при кредитно известие).')
       return
     }
 
@@ -400,17 +406,16 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="amount_net">Нето сума *</Label>
+              <Label htmlFor="amount_net">Нето сума * {documentType === 'CREDIT_NOTE' && <span className="text-xs text-orange-400">(отрицателна при КИ)</span>}</Label>
               <Input
                 id="amount_net"
                 type="number"
-                min={0}
                 step="0.01"
                 value={amountNet || ''}
                 onChange={(e) => {
                   const net = parseFloat(e.target.value) || 0
                   setAmountNet(net)
-                  if (hasVat) setVatAmount(Math.round(net * 20) / 100)
+                  if (hasVat) setVatAmount(Math.round(Math.abs(net) * 20) / 100 * (net < 0 ? -1 : 1))
                 }}
               />
             </div>
@@ -425,7 +430,8 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
                       const checked = e.target.checked
                       setHasVat(checked)
                       if (checked) {
-                        setVatAmount(Math.round(amountNet * 20) / 100)
+                        const sign = amountNet < 0 ? -1 : 1
+                        setVatAmount(Math.round(Math.abs(amountNet) * 20) / 100 * sign)
                       } else {
                         setVatAmount(0)
                       }
