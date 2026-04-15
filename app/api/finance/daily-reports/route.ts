@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { getFinanceUser, getUserPropertyIds } from '@/lib/finance/auth'
 import { createDailyReportSchema } from '@/lib/finance/schemas'
@@ -121,5 +122,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  revalidatePath('/finance/daily-reports')
   return NextResponse.json(report, { status: 201 })
 }
