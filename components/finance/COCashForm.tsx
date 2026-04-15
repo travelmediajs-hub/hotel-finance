@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,9 +9,12 @@ import { Label } from '@/components/ui/label'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog'
+import type { COCash } from '@/types/finance'
 
 interface Props {
   trigger: React.ReactNode
+  editCash?: COCash | null
+  onClose?: () => void
 }
 
 const paymentOptions = [
@@ -20,12 +23,31 @@ const paymentOptions = [
   { value: 'OTHER', label: 'Друго' },
 ]
 
-export function COCashForm({ trigger }: Props) {
+export function COCashForm({ trigger, editCash, onClose }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [allowedPayments, setAllowedPayments] = useState<string[]>(['CASH'])
+  const [allowedPayments, setAllowedPayments] = useState<string[]>(
+    editCash?.allowed_payments ?? ['CASH']
+  )
+
+  const isEdit = !!editCash
+
+  useEffect(() => {
+    if (editCash) {
+      setAllowedPayments(editCash.allowed_payments ?? ['CASH'])
+      setOpen(true)
+    }
+  }, [editCash])
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setError(null)
+      onClose?.()
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -50,8 +72,11 @@ export function COCashForm({ trigger }: Props) {
     }
 
     try {
-      const res = await fetch('/api/finance/co-cash', {
-        method: 'POST',
+      const url = isEdit ? `/api/finance/co-cash/${editCash.id}` : '/api/finance/co-cash'
+      const method = isEdit ? 'PATCH' : 'POST'
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
@@ -62,7 +87,7 @@ export function COCashForm({ trigger }: Props) {
         return
       }
 
-      setOpen(false)
+      handleOpenChange(false)
       router.refresh()
     } catch {
       setError('Грешка при връзка със сървъра')
@@ -72,11 +97,11 @@ export function COCashForm({ trigger }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement}></DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {!isEdit && <DialogTrigger render={trigger as React.ReactElement}></DialogTrigger>}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Нова каса ЦО</DialogTitle>
+          <DialogTitle>{isEdit ? 'Редактирай каса ЦО' : 'Нова каса ЦО'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
@@ -86,15 +111,15 @@ export function COCashForm({ trigger }: Props) {
           )}
           <div className="space-y-2">
             <Label htmlFor="co-name">Име *</Label>
-            <Input id="co-name" name="name" required placeholder="напр. Основна каса ЦО" />
+            <Input id="co-name" name="name" required placeholder="напр. Основна каса ЦО" defaultValue={editCash?.name ?? ''} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="co-balance">Начално салдо *</Label>
-            <Input id="co-balance" name="opening_balance" type="number" step="0.01" required defaultValue="0" />
+            <Input id="co-balance" name="opening_balance" type="number" step="0.01" required defaultValue={editCash?.opening_balance ?? 0} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="co-date">Дата на начално салдо *</Label>
-            <DateInput id="co-date" name="opening_balance_date" required />
+            <DateInput id="co-date" name="opening_balance_date" required defaultValue={editCash?.opening_balance_date ?? ''} />
           </div>
           <div className="space-y-2">
             <Label>Видове плащания *</Label>
@@ -119,11 +144,11 @@ export function COCashForm({ trigger }: Props) {
             </div>
           </div>
           <div className="flex gap-3 justify-end">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Отказ
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Запис...' : 'Създай'}
+              {loading ? 'Запис...' : isEdit ? 'Запази' : 'Създай'}
             </Button>
           </div>
         </form>

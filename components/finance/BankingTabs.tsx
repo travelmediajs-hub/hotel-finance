@@ -110,6 +110,7 @@ export function BankingTabs({
   const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
   const [editingRevolving, setEditingRevolving] = useState<RevolvingCredit | null>(null)
+  const [editingCoCash, setEditingCoCash] = useState<COCash | null>(null)
 
   const balanceMap = new Map(balances.map(b => [b.id, b]))
   const loanBalanceMap = new Map(loanBalances.map(b => [b.id, b]))
@@ -141,6 +142,17 @@ export function BankingTabs({
   async function deleteRevolving(id: string) {
     if (!confirm('Изтриване на revolving кредит?')) return
     const res = await fetch(`/api/finance/revolving-credits/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const body = await res.json()
+      alert(body.message ?? 'Грешка при изтриване')
+      return
+    }
+    router.refresh()
+  }
+
+  async function deleteCoCash(id: string) {
+    if (!confirm('Изтриване на каса ЦО?')) return
+    const res = await fetch(`/api/finance/co-cash/${id}`, { method: 'DELETE' })
     if (!res.ok) {
       const body = await res.json()
       alert(body.message ?? 'Грешка при изтриване')
@@ -518,6 +530,13 @@ export function BankingTabs({
                 </Button>
               }
             />
+            {editingCoCash && (
+              <COCashForm
+                trigger={<span />}
+                editCash={editingCoCash}
+                onClose={() => setEditingCoCash(null)}
+              />
+            )}
           </CardHeader>
           <CardContent>
             <Table>
@@ -526,12 +545,13 @@ export function BankingTabs({
                   <TableHead>Име</TableHead>
                   <TableHead className="text-right">Начално салдо</TableHead>
                   <TableHead className="text-right">Текущо салдо</TableHead>
+                  <TableHead className="w-20"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {coCash.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground">
                       Няма каси
                     </TableCell>
                   </TableRow>
@@ -547,6 +567,28 @@ export function BankingTabs({
                       </TableCell>
                       <TableCell className={`text-right font-mono ${currentBalance > 0 ? 'text-green-500' : currentBalance < 0 ? 'text-red-500' : ''}`}>
                         {currentBalance.toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-1.5"
+                            title="Редактирай"
+                            onClick={() => setEditingCoCash(cash)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-1.5 text-red-500"
+                            title="Изтрий"
+                            onClick={() => deleteCoCash(cash.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
