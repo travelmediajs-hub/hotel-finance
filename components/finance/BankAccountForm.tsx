@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -12,9 +12,12 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import type { BankAccount } from '@/types/finance'
 
 interface Props {
   trigger: React.ReactNode
+  editAccount?: BankAccount | null
+  onClose?: () => void
 }
 
 const currencyOptions = [
@@ -36,14 +39,35 @@ const paymentOptions = [
   { value: 'OTHER', label: 'Друго' },
 ]
 
-export function BankAccountForm({ trigger }: Props) {
+export function BankAccountForm({ trigger, editAccount, onClose }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [currency, setCurrency] = useState('')
-  const [accountType, setAccountType] = useState('')
-  const [allowedPayments, setAllowedPayments] = useState<string[]>(['BANK_TRANSFER', 'CARD'])
+  const [currency, setCurrency] = useState(editAccount?.currency ?? '')
+  const [accountType, setAccountType] = useState(editAccount?.account_type ?? '')
+  const [allowedPayments, setAllowedPayments] = useState<string[]>(
+    editAccount?.allowed_payments ?? ['BANK_TRANSFER', 'CARD']
+  )
+
+  const isEdit = !!editAccount
+
+  useEffect(() => {
+    if (editAccount) {
+      setCurrency(editAccount.currency)
+      setAccountType(editAccount.account_type)
+      setAllowedPayments(editAccount.allowed_payments ?? ['BANK_TRANSFER', 'CARD'])
+      setOpen(true)
+    }
+  }, [editAccount])
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      setError(null)
+      onClose?.()
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -76,8 +100,13 @@ export function BankAccountForm({ trigger }: Props) {
     }
 
     try {
-      const res = await fetch('/api/finance/bank-accounts', {
-        method: 'POST',
+      const url = isEdit
+        ? `/api/finance/bank-accounts/${editAccount.id}`
+        : '/api/finance/bank-accounts'
+      const method = isEdit ? 'PATCH' : 'POST'
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
@@ -88,7 +117,7 @@ export function BankAccountForm({ trigger }: Props) {
         return
       }
 
-      setOpen(false)
+      handleOpenChange(false)
       router.refresh()
     } catch {
       setError('Грешка при връзка със сървъра')
@@ -98,11 +127,11 @@ export function BankAccountForm({ trigger }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement}></DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {!isEdit && <DialogTrigger render={trigger as React.ReactElement}></DialogTrigger>}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Нова банкова сметка</DialogTitle>
+          <DialogTitle>{isEdit ? 'Редактирай сметка' : 'Нова банкова сметка'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
@@ -113,15 +142,15 @@ export function BankAccountForm({ trigger }: Props) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="ba-name">Име *</Label>
-              <Input id="ba-name" name="name" required placeholder="напр. Основна сметка" />
+              <Input id="ba-name" name="name" required placeholder="напр. Основна сметка" defaultValue={editAccount?.name ?? ''} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="ba-iban">IBAN *</Label>
-              <Input id="ba-iban" name="iban" required placeholder="BG..." />
+              <Input id="ba-iban" name="iban" required placeholder="BG..." defaultValue={editAccount?.iban ?? ''} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="ba-bank">Банка *</Label>
-              <Input id="ba-bank" name="bank" required placeholder="напр. УниКредит" />
+              <Input id="ba-bank" name="bank" required placeholder="напр. УниКредит" defaultValue={editAccount?.bank ?? ''} />
             </div>
             <div className="space-y-2">
               <Label>Валута *</Label>
@@ -147,11 +176,11 @@ export function BankAccountForm({ trigger }: Props) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="ba-balance">Начално салдо *</Label>
-              <Input id="ba-balance" name="opening_balance" type="number" step="0.01" required defaultValue="0" />
+              <Input id="ba-balance" name="opening_balance" type="number" step="0.01" required defaultValue={editAccount?.opening_balance ?? 0} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="ba-date">Дата на начално салдо *</Label>
-              <DateInput id="ba-date" name="opening_balance_date" required />
+              <DateInput id="ba-date" name="opening_balance_date" required defaultValue={editAccount?.opening_balance_date ?? ''} />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Видове плащания *</Label>
@@ -177,15 +206,15 @@ export function BankAccountForm({ trigger }: Props) {
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="ba-note">Бележка</Label>
-              <Input id="ba-note" name="note" placeholder="Допълнителна информация" />
+              <Input id="ba-note" name="note" placeholder="Допълнителна информация" defaultValue={editAccount?.note ?? ''} />
             </div>
           </div>
           <div className="flex gap-3 justify-end">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Отказ
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Запис...' : 'Създай'}
+              {loading ? 'Запис...' : isEdit ? 'Запази' : 'Създай'}
             </Button>
           </div>
         </form>

@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { Plus } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { BankAccountForm } from './BankAccountForm'
 import { BankTransactionForm } from './BankTransactionForm'
 import { LoanForm } from './LoanForm'
@@ -104,10 +106,48 @@ export function BankingTabs({
   coCashBalances,
   properties,
 }: Props) {
+  const router = useRouter()
+  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null)
+  const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
+  const [editingRevolving, setEditingRevolving] = useState<RevolvingCredit | null>(null)
+
   const balanceMap = new Map(balances.map(b => [b.id, b]))
   const loanBalanceMap = new Map(loanBalances.map(b => [b.id, b]))
   const revolvingBalanceMap = new Map(revolvingBalances.map(b => [b.id, b]))
   const coCashBalanceMap = new Map(coCashBalances.map(b => [b.id, b]))
+
+  async function deleteAccount(id: string) {
+    if (!confirm('Изтриване на банкова сметка?')) return
+    const res = await fetch(`/api/finance/bank-accounts/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const body = await res.json()
+      alert(body.message ?? 'Грешка при изтриване')
+      return
+    }
+    router.refresh()
+  }
+
+  async function deleteLoan(id: string) {
+    if (!confirm('Изтриване на кредит?')) return
+    const res = await fetch(`/api/finance/loans/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const body = await res.json()
+      alert(body.message ?? 'Грешка при изтриване')
+      return
+    }
+    router.refresh()
+  }
+
+  async function deleteRevolving(id: string) {
+    if (!confirm('Изтриване на revolving кредит?')) return
+    const res = await fetch(`/api/finance/revolving-credits/${id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const body = await res.json()
+      alert(body.message ?? 'Грешка при изтриване')
+      return
+    }
+    router.refresh()
+  }
 
   return (
     <Tabs defaultValue="accounts">
@@ -132,6 +172,13 @@ export function BankingTabs({
                 </Button>
               }
             />
+            {editingAccount && (
+              <BankAccountForm
+                trigger={<span />}
+                editAccount={editingAccount}
+                onClose={() => setEditingAccount(null)}
+              />
+            )}
           </CardHeader>
           <CardContent>
             <Table>
@@ -147,12 +194,13 @@ export function BankingTabs({
                   <TableHead className="text-right">Разходи</TableHead>
                   <TableHead className="text-right">Тек. салдо</TableHead>
                   <TableHead>Статус</TableHead>
+                  <TableHead className="w-20"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {accounts.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center text-muted-foreground">
+                    <TableCell colSpan={11} className="text-center text-muted-foreground">
                       Няма банкови сметки
                     </TableCell>
                   </TableRow>
@@ -183,6 +231,28 @@ export function BankingTabs({
                         <Badge variant={statusVariants[acc.status]}>
                           {statusLabels[acc.status]}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-1.5"
+                            title="Редактирай"
+                            onClick={() => setEditingAccount(acc)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-1.5 text-red-500"
+                            title="Изтрий"
+                            onClick={() => deleteAccount(acc.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -263,6 +333,14 @@ export function BankingTabs({
                 </Button>
               }
             />
+            {editingLoan && (
+              <LoanForm
+                accounts={accounts}
+                trigger={<span />}
+                editLoan={editingLoan}
+                onClose={() => setEditingLoan(null)}
+              />
+            )}
           </CardHeader>
           <CardContent>
             <Table>
@@ -275,12 +353,13 @@ export function BankingTabs({
                   <TableHead>Ден</TableHead>
                   <TableHead>Сметка</TableHead>
                   <TableHead>Статус</TableHead>
+                  <TableHead className="w-20"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loans.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground">
                       Няма кредити
                     </TableCell>
                   </TableRow>
@@ -302,6 +381,28 @@ export function BankingTabs({
                         <Badge variant={loanStatusVariants[loan.status]}>
                           {loanStatusLabels[loan.status]}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-1.5"
+                            title="Редактирай"
+                            onClick={() => setEditingLoan(loan)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-1.5 text-red-500"
+                            title="Изтрий"
+                            onClick={() => deleteLoan(loan.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -326,6 +427,14 @@ export function BankingTabs({
                 </Button>
               }
             />
+            {editingRevolving && (
+              <RevolvingForm
+                accounts={accounts}
+                trigger={<span />}
+                editRevolving={editingRevolving}
+                onClose={() => setEditingRevolving(null)}
+              />
+            )}
           </CardHeader>
           <CardContent>
             <Table>
@@ -337,12 +446,13 @@ export function BankingTabs({
                   <TableHead className="text-right">Лихва%</TableHead>
                   <TableHead>Сметка</TableHead>
                   <TableHead>Статус</TableHead>
+                  <TableHead className="w-20"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {revolvingCredits.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       Няма revolving кредити
                     </TableCell>
                   </TableRow>
@@ -363,6 +473,28 @@ export function BankingTabs({
                         <Badge variant={loanStatusVariants[rev.status]}>
                           {loanStatusLabels[rev.status]}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-1.5"
+                            title="Редактирай"
+                            onClick={() => setEditingRevolving(rev)}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-1.5 text-red-500"
+                            title="Изтрий"
+                            onClick={() => deleteRevolving(rev.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )

@@ -78,3 +78,33 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   return NextResponse.json(data)
 }
+
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  const { id } = await params
+  const user = await getFinanceUser()
+  if (!user || user.role !== 'ADMIN_CO') {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  const supabase = await createClient()
+
+  // Check for linked transactions
+  const { count } = await supabase
+    .from('bank_transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('bank_account_id', id)
+
+  if (count && count > 0) {
+    return NextResponse.json(
+      { message: 'Сметката има транзакции и не може да бъде изтрита' },
+      { status: 409 },
+    )
+  }
+
+  const { error } = await supabase.from('bank_accounts').delete().eq('id', id)
+  if (error) {
+    return NextResponse.json({ message: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
+}
