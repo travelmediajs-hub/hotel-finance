@@ -14,7 +14,7 @@ export default async function AdminPage() {
 
   const supabase = await createClient()
 
-  const [permissions, roles, { data: properties }, { data: users }, { data: access }, { data: rolePerms }] =
+  const [permissions, roles, { data: properties }, { data: users }, { data: access }, { data: rolePerms }, { data: positions }] =
     await Promise.all([
       listPermissions(),
       listRoles(),
@@ -25,6 +25,7 @@ export default async function AdminPage() {
         .order('full_name'),
       supabase.from('user_property_access').select('user_id, property_id, properties(name)'),
       supabase.from('role_permissions').select('role_key, permission_key, granted'),
+      supabase.from('positions').select('id, name, sort_order').order('sort_order'),
     ])
 
   const byUser: Record<string, { id: string; name: string }[]> = {}
@@ -55,6 +56,7 @@ export default async function AdminPage() {
         canUsersManage={canManageUsers}
         canRolesView={canRoles}
         canRolesManage={canManageRoles}
+        positions={positions ?? []}
       />
     </div>
   )

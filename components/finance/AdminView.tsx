@@ -34,6 +34,12 @@ interface RolePermRow {
 
 interface Property { id: string; name: string }
 
+interface PositionRow {
+  id: string
+  name: string
+  sort_order: number
+}
+
 interface Props {
   currentUserId: string
   currentUserRole: string
@@ -42,6 +48,7 @@ interface Props {
   properties: Property[]
   users: UserRow[]
   rolePermissions: RolePermRow[]
+  positions: PositionRow[]
   canUsersView: boolean
   canUsersManage: boolean
   canRolesView: boolean
@@ -55,6 +62,7 @@ export function AdminView(props: Props) {
       <TabsList>
         {props.canUsersView && <TabsTrigger value="users">Потребители</TabsTrigger>}
         {props.canRolesView && <TabsTrigger value="roles">Роли и права</TabsTrigger>}
+        <TabsTrigger value="positions">Длъжности</TabsTrigger>
       </TabsList>
 
       {props.canUsersView && (
@@ -67,6 +75,9 @@ export function AdminView(props: Props) {
           <RolesTab {...props} />
         </TabsContent>
       )}
+      <TabsContent value="positions">
+        <PositionsTab positions={props.positions} />
+      </TabsContent>
     </Tabs>
   )
 }
@@ -620,6 +631,108 @@ function RolesTab({
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+// ======================= POSITIONS TAB =======================
+
+function PositionsTab({ positions: initialPositions }: { positions: PositionRow[] }) {
+  const router = useRouter()
+  const [positions, setPositions] = useState(initialPositions)
+  const [newName, setNewName] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function addPosition() {
+    if (!newName.trim()) return
+    setSaving(true)
+    setError(null)
+    try {
+      const maxSort = positions.reduce((m, p) => Math.max(m, p.sort_order), 0)
+      const res = await fetch('/api/finance/admin/positions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newName.trim(), sort_order: maxSort + 10 }),
+      })
+      const body = await res.json()
+      if (!res.ok) {
+        setError(body.message ?? 'Грешка')
+        return
+      }
+      setNewName('')
+      setPositions((prev) => [...prev, body])
+      router.refresh()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function deletePosition(id: string) {
+    if (!confirm('Изтриване на длъжност?')) return
+    const res = await fetch(`/api/finance/admin/positions/${id}`, { method: 'DELETE' })
+    const body = await res.json()
+    if (!res.ok) {
+      alert(body.message ?? 'Грешка — може да е в употреба')
+      return
+    }
+    setPositions((prev) => prev.filter((p) => p.id !== id))
+    router.refresh()
+  }
+
+  return (
+    <div className="space-y-3">
+      <h2 className="text-sm font-semibold">Длъжности ({positions.length})</h2>
+
+      <div className="flex items-center gap-2">
+        <Input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Нова длъжност..."
+          className="h-8 text-xs w-56"
+          onKeyDown={(e) => e.key === 'Enter' && addPosition()}
+        />
+        <Button size="sm" className="h-8 text-xs" onClick={addPosition} disabled={saving || !newName.trim()}>
+          <Plus className="h-3.5 w-3.5 mr-1" /> Добави
+        </Button>
+      </div>
+
+      {error && <p className="text-xs text-red-500">{error}</p>}
+
+      <div className="border border-border rounded overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-muted">
+            <tr className="text-left">
+              <th className="px-2 py-1.5">Длъжност</th>
+              <th className="px-2 py-1.5 w-16"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {positions.map((p) => (
+              <tr key={p.id} className="border-t border-border hover:bg-muted/30">
+                <td className="px-2 py-1.5">{p.name}</td>
+                <td className="px-2 py-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 text-[10px] px-1.5 text-red-500"
+                    onClick={() => deletePosition(p.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+            {positions.length === 0 && (
+              <tr>
+                <td colSpan={2} className="px-2 py-4 text-center text-muted-foreground">
+                  Няма длъжности
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   )
