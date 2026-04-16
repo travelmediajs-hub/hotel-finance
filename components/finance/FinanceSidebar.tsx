@@ -158,10 +158,10 @@ export function FinanceSidebar({
   }
 
   return (
-    <div className="flex flex-col h-full w-64 bg-card border-r border-border">
-      <div className="p-4 flex items-start justify-between">
+    <div className="flex flex-col h-full w-60 bg-card border-r border-border min-h-0">
+      <div className="p-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <img src="/logos/kp-hotels.svg" alt="K&P Hotels" className="h-12 w-12" />
+          <img src="/logos/kp-hotels.svg" alt="K&P Hotels" className="h-9 w-9" />
           <div>
             <h1 className="text-sm font-semibold text-foreground leading-tight">K&amp;P Hotels</h1>
             <p className="text-[10px] text-muted-foreground">Финанси</p>
@@ -175,8 +175,8 @@ export function FinanceSidebar({
       {/* Role simulator — only for real ADMIN_CO */}
       {realRole === 'ADMIN_CO' && (
         <>
-          <div className="px-3 py-2">
-            <div className="flex items-center gap-1.5 mb-1.5">
+          <div className="px-3 py-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 mb-1">
               <Eye className="h-3 w-3 text-amber-500" />
               <span className="text-[10px] font-medium text-amber-500 uppercase tracking-wider">
                 Симулация
@@ -268,19 +268,19 @@ export function FinanceSidebar({
       )}
 
       {isSimulating && (
-        <div className="mx-3 mt-2 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30">
+        <div className="mx-3 mt-1.5 px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 shrink-0">
           <p className="text-[10px] text-amber-500 text-center">
             Виждате като: {roleLabels[userRole]}
           </p>
         </div>
       )}
 
-      <ScrollArea className="flex-1 p-2">
-        <nav className="space-y-3">
+      <ScrollArea className="flex-1 min-h-0 p-2">
+        <nav className="space-y-1.5">
           {visibleGroups.map((group, idx) => (
             <div key={group.label ?? `group-${idx}`} className="space-y-0.5">
               {group.label && (
-                <p className="px-3 pt-1 pb-0.5 text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider">
+                <p className="px-3 pt-1 text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wider">
                   {group.label}
                 </p>
               )}
@@ -294,7 +294,7 @@ export function FinanceSidebar({
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-3 px-3 py-1.5 rounded-md text-sm transition-colors',
+                      'flex items-center gap-2.5 px-3 py-1 rounded-md text-[13px] transition-colors',
                       isActive
                         ? 'bg-secondary text-foreground font-medium'
                         : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
@@ -312,7 +312,7 @@ export function FinanceSidebar({
 
       <Separator className="bg-border" />
 
-      <div className="p-3 flex items-center gap-3">
+      <div className="p-2 flex items-center gap-2 shrink-0">
         <Avatar className="h-7 w-7">
           <AvatarFallback className="bg-secondary text-muted-foreground text-xs">
             {userFullName[0]?.toUpperCase() ?? '?'}
