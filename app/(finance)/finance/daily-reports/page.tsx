@@ -47,14 +47,62 @@ export default async function DailyReportsPage({ searchParams }: Props) {
     )
   }
 
-  const { data: departments } = await supabase
-    .from('departments')
-    .select('id, name, fiscal_device_id, sort_order')
+  const [{ data: departments }, { data: propertyInfo }] = await Promise.all([
+    supabase
+      .from('departments')
+      .select('id, name, fiscal_device_id, sort_order')
+      .eq('property_id', selectedPropertyId)
+      .eq('status', 'ACTIVE')
+      .eq('kind', 'REVENUE')
+      .order('sort_order')
+      .order('name'),
+    supabase
+      .from('properties')
+      .select('active_since')
+      .eq('id', selectedPropertyId)
+      .single(),
+  ])
+
+  // Auto-create missing DRAFT reports for every day from max(active_since, today-30) to today
+  const BACKFILL_DAYS = 30
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const windowStart = new Date(today)
+  windowStart.setDate(windowStart.getDate() - BACKFILL_DAYS)
+  const activeSince = propertyInfo?.active_since ? new Date(propertyInfo.active_since) : windowStart
+  const backfillStart = activeSince > windowStart ? activeSince : windowStart
+  const backfillStartStr = backfillStart.toISOString().split('T')[0]
+  const todayStr = today.toISOString().split('T')[0]
+
+  const { data: existingDates } = await supabase
+    .from('daily_reports')
+    .select('date')
     .eq('property_id', selectedPropertyId)
-    .eq('status', 'ACTIVE')
-    .eq('kind', 'REVENUE')
-    .order('sort_order')
-    .order('name')
+    .gte('date', backfillStartStr)
+    .lte('date', todayStr)
+
+  const existingDateSet = new Set((existingDates ?? []).map((r) => r.date))
+  const missingDates: string[] = []
+  for (let d = new Date(backfillStart); d <= today; d.setDate(d.getDate() + 1)) {
+    const iso = d.toISOString().split('T')[0]
+    if (!existingDateSet.has(iso)) missingDates.push(iso)
+  }
+
+  if (missingDates.length > 0) {
+    await supabase.from('daily_reports').insert(
+      missingDates.map((date) => ({
+        property_id: selectedPropertyId,
+        date,
+        created_by_id: user.id,
+        status: 'DRAFT',
+        total_cash_net: 0,
+        total_pos_net: 0,
+        cash_diff: 0,
+        pos_diff: 0,
+        total_diff: 0,
+      })),
+    )
+  }
 
   const reportsQuery = () => supabase
     .from('daily_reports')
