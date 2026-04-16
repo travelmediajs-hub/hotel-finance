@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Save, Trash2, UserPlus, KeyRound } from 'lucide-react'
+import { Plus, Save, Trash2, UserPlus, KeyRound, Pencil } from 'lucide-react'
 import type { PermissionRow, RoleRow } from '@/lib/finance/permissions'
 
 interface UserRow {
@@ -91,6 +91,8 @@ function UsersTab({
   const [inviteOpen, setInviteOpen] = useState(false)
   const [pwUserId, setPwUserId] = useState<string | null>(null)
   const [pwUserName, setPwUserName] = useState('')
+  const [editingUser, setEditingUser] = useState<UserRow | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   async function toggleActive(u: UserRow) {
     if (u.id === currentUserId) return
@@ -118,6 +120,31 @@ function UsersTab({
       return
     }
     router.refresh()
+  }
+
+  async function handleDelete(u: UserRow) {
+    if (u.id === currentUserId) return
+    if (!confirm(`Изтрий "${u.full_name}"? Това действие е необратимо.`)) return
+    setDeletingId(u.id)
+    try {
+      const res = await fetch(`/api/finance/admin/users/${u.id}`, { method: 'DELETE' })
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}))
+        const msg = data.message ?? 'Потребителят има свързани записи.'
+        if (u.is_active && confirm(`${msg}\n\nЖелаеш ли да го деактивираш вместо това?`)) {
+          await toggleActive(u)
+        }
+        return
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.message ?? 'Грешка при триене')
+        return
+      }
+      router.refresh()
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
@@ -205,6 +232,15 @@ function UsersTab({
                       <Button
                         size="sm"
                         variant="outline"
+                        className="h-6 text-[10px] px-1.5"
+                        title="Редактирай"
+                        onClick={() => setEditingUser(u)}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
                         className="h-6 text-[10px] px-2"
                         onClick={() => toggleActive(u)}
                       >
@@ -221,6 +257,16 @@ function UsersTab({
                         }}
                       >
                         <KeyRound className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-6 text-[10px] px-1.5 hover:text-destructive"
+                        title="Изтрий"
+                        disabled={deletingId === u.id}
+                        onClick={() => handleDelete(u)}
+                      >
+                        <Trash2 className="h-3 w-3" />
                       </Button>
                     </div>
                   )}
@@ -245,7 +291,137 @@ function UsersTab({
           onDone={() => setPwUserId(null)}
         />
       </Dialog>
+
+      <Dialog open={!!editingUser} onOpenChange={(open) => { if (!open) setEditingUser(null) }}>
+        {editingUser && (
+          <EditUserDialog
+            user={editingUser}
+            isSelf={editingUser.id === currentUserId}
+            roles={roles}
+            properties={properties}
+            onDone={() => {
+              setEditingUser(null)
+              router.refresh()
+            }}
+          />
+        )}
+      </Dialog>
     </div>
+  )
+}
+
+function EditUserDialog({
+  user, isSelf, roles, properties, onDone,
+}: {
+  user: UserRow
+  isSelf: boolean
+  roles: RoleRow[]
+  properties: Property[]
+  onDone: () => void
+}) {
+  const [fullName, setFullName] = useState(user.full_name)
+  const [phone, setPhone] = useState(user.phone ?? '')
+  const [roleKey, setRoleKey] = useState(user.role)
+  const [propertyIds, setPropertyIds] = useState<string[]>(user.properties.map((p) => p.id))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const showProperties = roleKey === 'MANAGER' || roleKey === 'DEPT_HEAD'
+
+  function toggleProperty(id: string) {
+    setPropertyIds((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    )
+  }
+
+  async function submit() {
+    setSaving(true)
+    setError(null)
+    try {
+      const body: Record<string, unknown> = {
+        full_name: fullName,
+        phone: phone || null,
+        property_ids: showProperties ? propertyIds : [],
+      }
+      if (!isSelf) body.role = roleKey
+      const res = await fetch(`/api/finance/admin/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.message ?? 'Грешка при запис')
+        return
+      }
+      onDone()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle>Редактирай потребител</DialogTitle>
+      </DialogHeader>
+      <div className="space-y-3 text-xs">
+        <div>
+          <Label className="text-xs">Име</Label>
+          <Input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Телефон</Label>
+          <Input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="h-8 text-xs"
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Роля{isSelf && ' (не може да се променя)'}</Label>
+          <Select value={roleKey} onValueChange={(v) => v && setRoleKey(v)} disabled={isSelf}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map((r) => (
+                <SelectItem key={r.key} value={r.key} className="text-xs">
+                  {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {showProperties && (
+          <div>
+            <Label className="text-xs">Обекти</Label>
+            <div className="grid grid-cols-2 gap-1 border border-border rounded p-2 max-h-40 overflow-y-auto">
+              {properties.map((p) => (
+                <label key={p.id} className="flex items-center gap-1.5 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={propertyIds.includes(p.id)}
+                    onChange={() => toggleProperty(p.id)}
+                  />
+                  {p.name}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+        {error && <p className="text-xs text-red-500">{error}</p>}
+      </div>
+      <DialogFooter>
+        <Button size="sm" onClick={submit} disabled={saving || !fullName || !roleKey}>
+          {saving ? 'Запазване...' : 'Запази'}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
   )
 }
 

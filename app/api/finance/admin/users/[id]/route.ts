@@ -149,13 +149,43 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     )
   }
 
-  // Soft delete: deactivate profile. Hard delete of auth user is destructive.
-  const { error } = await admin
-    .from('user_profiles')
-    .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq('id', id)
+  // Check for references that would block hard delete
+  const supabase = await createClient()
+  const checks: Array<{ table: string; column: string }> = [
+    { table: 'daily_reports', column: 'created_by_id' },
+    { table: 'daily_report_lines', column: 'filled_by_id' },
+    { table: 'expenses', column: 'created_by_id' },
+    { table: 'income', column: 'created_by_id' },
+    { table: 'cash_collections', column: 'collected_by_id' },
+    { table: 'cash_transfers', column: 'sent_by_id' },
+    { table: 'properties', column: 'manager_id' },
+    { table: 'properties', column: 'created_by' },
+    { table: 'departments', column: 'manager_id' },
+  ]
+  for (const { table, column } of checks) {
+    const { count, error } = await supabase
+      .from(table)
+      .select('id', { count: 'exact', head: true })
+      .eq(column, id)
+    if (error) continue // table may not exist in this deployment — skip
+    if ((count ?? 0) > 0) {
+      return NextResponse.json(
+        {
+          error: 'has_references',
+          message: 'Потребителят има свързани записи и не може да бъде изтрит. Деактивирай го вместо това.',
+        },
+        { status: 409 }
+      )
+    }
+  }
+
+  // Hard delete auth user — cascades to user_profiles via ON DELETE CASCADE
+  const { error } = await admin.auth.admin.deleteUser(id)
   if (error) {
-    return NextResponse.json({ error: 'database_error', message: error.message }, { status: 500 })
+    return NextResponse.json(
+      { error: 'delete_error', message: error.message },
+      { status: 500 }
+    )
   }
 
   return NextResponse.json({ ok: true })
