@@ -55,3 +55,44 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   return NextResponse.json(data)
 }
+
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+  const { id } = await params
+  const user = await getFinanceUser()
+  if (!user || user.role !== 'ADMIN_CO') {
+    return NextResponse.json({ error: 'forbidden' }, { status: 403 })
+  }
+
+  const supabase = await createClient()
+
+  const [lines, expenses] = await Promise.all([
+    supabase
+      .from('daily_report_lines')
+      .select('id', { count: 'exact', head: true })
+      .eq('department_id', id),
+    supabase
+      .from('expenses')
+      .select('id', { count: 'exact', head: true })
+      .eq('department_id', id),
+  ])
+
+  if ((lines.count ?? 0) > 0) {
+    return NextResponse.json(
+      { message: 'Точката има дневни отчети и не може да бъде изтрита. Деактивирай я вместо това.' },
+      { status: 409 },
+    )
+  }
+  if ((expenses.count ?? 0) > 0) {
+    return NextResponse.json(
+      { message: 'Точката има разходи и не може да бъде изтрита. Деактивирай я вместо това.' },
+      { status: 409 },
+    )
+  }
+
+  const { error } = await supabase.from('departments').delete().eq('id', id)
+  if (error) {
+    return NextResponse.json({ message: error.message }, { status: 500 })
+  }
+
+  return NextResponse.json({ ok: true })
+}

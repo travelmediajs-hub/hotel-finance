@@ -75,9 +75,10 @@ export async function GET(request: NextRequest) {
   ] = await Promise.all([
     supabase
       .from('departments')
-      .select('id, name')
+      .select('id, name, sort_order')
       .eq('property_id', propertyId)
       .eq('status', 'ACTIVE')
+      .order('sort_order')
       .order('name'),
 
     supabase

@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -7,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { DepartmentForm } from './DepartmentForm'
-import { Plus, Pencil } from 'lucide-react'
+import { Plus, Pencil, Trash2 } from 'lucide-react'
 import type { Department, FiscalDevice, POSTerminal } from '@/types/finance'
 
 interface Props {
@@ -18,8 +20,26 @@ interface Props {
 }
 
 export function DepartmentList({ propertyId, departments, fiscalDevices, posTerminals }: Props) {
+  const router = useRouter()
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const fdMap = new Map(fiscalDevices.map(fd => [fd.id, fd]))
   const ptMap = new Map(posTerminals.map(pt => [pt.id, pt]))
+
+  async function handleDelete(dept: Department) {
+    if (!confirm(`Изтрий "${dept.name}"? Това действие е необратимо.`)) return
+    setDeletingId(dept.id)
+    try {
+      const res = await fetch(`/api/finance/departments/${dept.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.message ?? 'Грешка при триене')
+        return
+      }
+      router.refresh()
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   return (
     <Card>
@@ -51,7 +71,7 @@ export function DepartmentList({ propertyId, departments, fiscalDevices, posTerm
                 <TableHead>Касов апарат</TableHead>
                 <TableHead>POS терминал</TableHead>
                 <TableHead>Статус</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -74,17 +94,29 @@ export function DepartmentList({ propertyId, departments, fiscalDevices, posTerm
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <DepartmentForm
-                        propertyId={propertyId}
-                        department={dept}
-                        fiscalDevices={fiscalDevices}
-                        posTerminals={posTerminals}
-                        trigger={
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                        }
-                      />
+                      <div className="flex items-center gap-1">
+                        <DepartmentForm
+                          propertyId={propertyId}
+                          department={dept}
+                          fiscalDevices={fiscalDevices}
+                          posTerminals={posTerminals}
+                          trigger={
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          }
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          disabled={deletingId === dept.id}
+                          onClick={() => handleDelete(dept)}
+                          title="Изтрий"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
