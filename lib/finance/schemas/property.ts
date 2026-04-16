@@ -54,6 +54,7 @@ export const createDepartmentSchema = z.object({
   pos_terminal_id: z.string().uuid().nullable().optional(),
   sort_order: z.number().int().min(0).optional(),
   kind: z.enum(['REVENUE', 'EXPENSE']).optional(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 })
 
 export const updateDepartmentSchema = createDepartmentSchema.omit({ property_id: true }).partial()

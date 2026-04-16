@@ -32,6 +32,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if ('fiscal_device_id' in parsed.data) updateData.fiscal_device_id = parsed.data.fiscal_device_id ?? null
   if ('pos_terminal_id' in parsed.data) updateData.pos_terminal_id = parsed.data.pos_terminal_id ?? null
   if ('sort_order' in parsed.data) updateData.sort_order = parsed.data.sort_order ?? 0
+  if ('status' in parsed.data && parsed.data.status) updateData.status = parsed.data.status
   if ('kind' in parsed.data && parsed.data.kind) {
     updateData.kind = parsed.data.kind
   } else if ('fiscal_device_id' in parsed.data || 'pos_terminal_id' in parsed.data) {

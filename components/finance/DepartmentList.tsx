@@ -9,7 +9,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import { DepartmentForm } from './DepartmentForm'
-import { Plus, Pencil, Trash2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, Power } from 'lucide-react'
 import type { Department, FiscalDevice, POSTerminal } from '@/types/finance'
 
 interface Props {
@@ -30,9 +30,36 @@ export function DepartmentList({ propertyId, departments, fiscalDevices, posTerm
     setDeletingId(dept.id)
     try {
       const res = await fetch(`/api/finance/departments/${dept.id}`, { method: 'DELETE' })
+      if (res.status === 409) {
+        const data = await res.json().catch(() => ({}))
+        const msg = data.message ?? 'Точката има свързани записи.'
+        if (confirm(`${msg}\n\nЖелаеш ли да я деактивираш вместо това?`)) {
+          await toggleStatus(dept, 'INACTIVE')
+        }
+        return
+      }
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
         alert(data.message ?? 'Грешка при триене')
+        return
+      }
+      router.refresh()
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  async function toggleStatus(dept: Department, status: 'ACTIVE' | 'INACTIVE') {
+    setDeletingId(dept.id)
+    try {
+      const res = await fetch(`/api/finance/departments/${dept.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(data.message ?? 'Грешка при промяна на статус')
         return
       }
       router.refresh()
@@ -71,7 +98,7 @@ export function DepartmentList({ propertyId, departments, fiscalDevices, posTerm
                 <TableHead>Касов апарат</TableHead>
                 <TableHead>POS терминал</TableHead>
                 <TableHead>Статус</TableHead>
-                <TableHead className="w-20" />
+                <TableHead className="w-28" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -106,6 +133,16 @@ export function DepartmentList({ propertyId, departments, fiscalDevices, posTerm
                             </Button>
                           }
                         />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          disabled={deletingId === dept.id}
+                          onClick={() => toggleStatus(dept, dept.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE')}
+                          title={dept.status === 'ACTIVE' ? 'Деактивирай' : 'Активирай'}
+                        >
+                          <Power className="h-3.5 w-3.5" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
