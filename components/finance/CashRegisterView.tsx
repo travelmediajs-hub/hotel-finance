@@ -141,10 +141,10 @@ export function CashRegisterView({ properties, balances, canEdit, defaultPropert
               <div className="flex-1">
                 <p className="text-sm text-muted-foreground">{balance.name}</p>
                 <p className={`text-2xl font-bold ${balance.current_balance >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {fmt(balance.current_balance)} лв.
+                  {fmt(balance.current_balance)} €
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Начално салдо: {fmt(balance.opening_balance)} лв. от {fmtDate(balance.opening_balance_date)}
+                  Начално салдо: {fmt(balance.opening_balance)} € от {fmtDate(balance.opening_balance_date)}
                 </p>
               </div>
               {canEdit && (
