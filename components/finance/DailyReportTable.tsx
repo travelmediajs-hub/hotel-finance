@@ -421,8 +421,8 @@ export function DailyReportTable({
     )
   }
 
-  // Cell styling: clean, breathable, grouped
-  const cellBase = 'border-b border-border/40 text-right tabular-nums font-mono text-[11px]'
+  // Cell styling: Excel-like grid, breathable, grouped
+  const cellBase = 'border-b border-r border-border/70 text-right tabular-nums font-mono text-[11px]'
   const cellPad = 'px-2.5 py-2'
   const cashBg = 'bg-emerald-500/[0.03]'
   const posBg = 'bg-sky-500/[0.03]'
