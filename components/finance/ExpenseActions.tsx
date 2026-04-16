@@ -110,7 +110,7 @@ export function ExpenseActions({
   const canApprove = isCO && status === 'SENT_TO_CO'
   const canReturn = isCO && status === 'SENT_TO_CO'
   const canReject = isCO && status === 'SENT_TO_CO'
-  const canPay = isCO && (status === 'APPROVED' || status === 'UNPAID' || status === 'PARTIAL' || status === 'OVERDUE')
+  const canPay = isAdmin && (status === 'APPROVED' || status === 'UNPAID' || status === 'PARTIAL' || status === 'OVERDUE')
   const canEdit = isCO && !['PAID', 'PARTIAL', 'REJECTED'].includes(status)
 
   const hasActions = canSubmit || canApprove || canReturn || canReject || canPay || canEdit

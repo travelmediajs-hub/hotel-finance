@@ -237,7 +237,7 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
         return
       }
 
-      if (!isDraft) {
+      if (!isDraft && saved.status === 'DRAFT') {
         const submitRes = await fetch(`/api/finance/expenses/${saved.id}/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

@@ -242,7 +242,7 @@ export function ExpenseSpreadsheet({
 
       const saved = await res.json()
 
-      if (submit) {
+      if (submit && saved.status === 'DRAFT') {
         const submitRes = await fetch(`/api/finance/expenses/${saved.id}/submit`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

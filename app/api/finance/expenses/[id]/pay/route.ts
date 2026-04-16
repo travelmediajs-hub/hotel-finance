@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { getFinanceUser, isCORole } from '@/lib/finance/auth'
+import { getFinanceUser } from '@/lib/finance/auth'
 import { payExpenseSchema } from '@/lib/finance/schemas'
 
 interface RouteParams {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
-  if (!isCORole(user.role)) {
+  if (user.role !== 'ADMIN_CO') {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
