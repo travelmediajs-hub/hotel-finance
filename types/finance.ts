@@ -123,6 +123,11 @@ export interface Property {
   authorized_person_id: string | null
   status: ActiveStatus
   active_since: string
+  rooms_main: number
+  rooms_annex: number
+  total_beds: number
+  operating_months: number[]
+  annual_rent: number
   created_at: string
   updated_at: string
   created_by: string
@@ -647,4 +652,75 @@ export interface CashMovement {
   income: number | null
   expense: number | null
   reference_id: string
+}
+
+// ============================================================
+// OPERATIONAL P&L REPORT
+// ============================================================
+
+export type OpReportRowType =
+  | 'HEADER' | 'STAT' | 'REVENUE' | 'EXPENSE'
+  | 'PAYROLL' | 'RENT' | 'DERIVED'
+
+export type OpReportSection =
+  | 'STATISTICS' | 'REVENUE' | 'FB_EXPENSES' | 'STAFF'
+  | 'UTILITIES' | 'OTHER_EXPENSES' | 'TOTALS'
+
+export type OpReportDisplayFormat = 'NUMBER' | 'PERCENT' | 'CURRENCY'
+
+export type OpReportVatMode = 'net' | 'gross'
+
+export type OpReportViewMode = 'plan' | 'actual' | 'variance'
+
+export interface OpReportRow {
+  id: string
+  row_key: string
+  label_bg: string
+  section: OpReportSection
+  sort_order: number
+  row_type: OpReportRowType
+  formula: string | null
+  source: string | null
+  vat_applicable: boolean
+  budgetable: boolean
+  display_format: OpReportDisplayFormat
+  indent_level: number
+}
+
+export interface OpReportRowWithAccounts extends OpReportRow {
+  account_ids: string[]
+}
+
+export interface OpReportBudget {
+  id: string
+  property_id: string
+  year: number
+  month: number
+  row_id: string
+  amount: number
+}
+
+export interface OpReportCell {
+  plan: number | null
+  actual: number | null
+  variance_pct: number | null
+}
+
+export interface OpReportMatrixRow {
+  row_key: string
+  label_bg: string
+  section: OpReportSection
+  row_type: OpReportRowType
+  display_format: OpReportDisplayFormat
+  indent_level: number
+  cells: Record<number, OpReportCell>
+  ytd: OpReportCell
+}
+
+export interface OpReportMatrix {
+  property_id: string
+  year: number
+  vat_mode: OpReportVatMode
+  operating_months: number[]
+  rows: OpReportMatrixRow[]
 }
