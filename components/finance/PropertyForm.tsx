@@ -10,6 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import type { Property } from '@/types/finance'
 
 const propertyTypes = [
@@ -46,6 +47,13 @@ export function PropertyForm({ property }: Props) {
   const [type, setType] = useState(property?.type ?? '')
   const [category, setCategory] = useState(property?.category ?? '')
   const [status, setStatus] = useState(property?.status ?? 'ACTIVE')
+  const [roomsMain, setRoomsMain] = useState(property?.rooms_main ?? 0)
+  const [roomsAnnex, setRoomsAnnex] = useState(property?.rooms_annex ?? 0)
+  const [totalBeds, setTotalBeds] = useState(property?.total_beds ?? 0)
+  const [annualRent, setAnnualRent] = useState(property?.annual_rent ?? 0)
+  const [operatingMonths, setOperatingMonths] = useState<number[]>(
+    property?.operating_months ?? [1,2,3,4,5,6,7,8,9,10,11,12]
+  )
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -65,6 +73,12 @@ export function PropertyForm({ property }: Props) {
     if (type) body.type = type
     if (category) body.category = category
     if (isEdit && status) body.status = status
+
+    body.rooms_main = roomsMain
+    body.rooms_annex = roomsAnnex
+    body.total_beds = totalBeds
+    body.annual_rent = annualRent
+    body.operating_months = operatingMonths
 
     try {
       const url = isEdit
@@ -224,6 +238,57 @@ export function PropertyForm({ property }: Props) {
                 </Select>
               </div>
             )}
+
+            <div className="space-y-2">
+              <Label htmlFor="rooms_main">Брой стаи (основна сграда)</Label>
+              <Input id="rooms_main" type="number" min={0} value={roomsMain}
+                onChange={e => setRoomsMain(parseInt(e.target.value) || 0)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="rooms_annex">Брой стаи (анекс)</Label>
+              <Input id="rooms_annex" type="number" min={0} value={roomsAnnex}
+                onChange={e => setRoomsAnnex(parseInt(e.target.value) || 0)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="total_beds">Общ брой легла</Label>
+              <Input id="total_beds" type="number" min={0} value={totalBeds}
+                onChange={e => setTotalBeds(parseInt(e.target.value) || 0)} />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="annual_rent">Годишен наем (EUR)</Label>
+              <Input id="annual_rent" type="number" min={0} step="0.01" value={annualRent}
+                onChange={e => setAnnualRent(parseFloat(e.target.value) || 0)} />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label>Работни месеци</Label>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {['Яну','Фев','Мар','Апр','Май','Юни','Юли','Авг','Сеп','Окт','Ное','Дек'].map((name, idx) => {
+                  const m = idx + 1
+                  const active = operatingMonths.includes(m)
+                  return (
+                    <button
+                      type="button"
+                      key={m}
+                      onClick={() => {
+                        setOperatingMonths(prev =>
+                          prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m].sort((a, b) => a - b)
+                        )
+                      }}
+                      className={cn(
+                        'px-2 py-1 text-xs border rounded',
+                        active ? 'bg-primary text-primary-foreground border-primary' : 'bg-background'
+                      )}
+                    >
+                      {name}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
