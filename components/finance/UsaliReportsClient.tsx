@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { UsaliDepartmentalReport } from './UsaliDepartmentalReport'
 import { UsaliSummaryReport } from './UsaliSummaryReport'
 import { UsaliRevenueAnalysis } from './UsaliRevenueAnalysis'
+import { OpReportTab } from './OpReportTab'
 
 interface Props {
   properties: Array<{ id: string; name: string }>
@@ -14,6 +15,7 @@ const tabs = [
   { key: 'departmental', label: 'Департаментален' },
   { key: 'summary', label: 'Обобщен (GOP/NOI)' },
   { key: 'revenue', label: 'Revenue Analysis' },
+  { key: 'opreport', label: 'Операционен P&L' },
 ] as const
 
 type TabKey = typeof tabs[number]['key']
@@ -84,6 +86,9 @@ export function UsaliReportsClient({ properties }: Props) {
       )}
       {tab === 'revenue' && propertyId && (
         <UsaliRevenueAnalysis propertyId={propertyId} year={year} month={month} />
+      )}
+      {tab === 'opreport' && propertyId && (
+        <OpReportTab propertyId={propertyId} year={year} />
       )}
     </div>
   )
