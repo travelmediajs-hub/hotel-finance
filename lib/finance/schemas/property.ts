@@ -19,6 +19,14 @@ export const createPropertySchema = z.object({
   manager_id: z.string().uuid(),
   authorized_person_id: z.string().uuid().nullable().optional(),
   active_since: z.string().date(),
+  rooms_main: z.coerce.number().int().min(0).optional(),
+  rooms_annex: z.coerce.number().int().min(0).optional(),
+  total_beds: z.coerce.number().int().min(0).optional(),
+  annual_rent: z.coerce.number().min(0).optional(),
+  operating_months: z.array(z.number().int().min(1).max(12))
+    .min(1)
+    .refine(arr => new Set(arr).size === arr.length, 'Дублирани месеци')
+    .optional(),
 })
 
 export const updatePropertySchema = createPropertySchema.partial()
