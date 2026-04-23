@@ -1,27 +1,28 @@
 -- 1) Add any usali_accounts needed by the template that may not exist yet.
--- These are idempotent inserts under the existing "EXPENSES" hierarchy.
--- Codes chosen in the 95xx range to avoid conflicts with the existing USALI seed.
+-- Each new account is assigned to the appropriate department template
+-- (template_id is NOT NULL in usali_accounts).
 INSERT INTO usali_accounts (code, name, account_type, level, parent_id, template_id, sort_order)
-SELECT v.code, v.name, 'EXPENSE', 2, NULL, NULL, v.sort_order
+SELECT v.code, v.name, 'EXPENSE', 2, NULL, t.id, v.sort_order
 FROM (VALUES
-  ('9501', 'Heating (pellets)',           10),
-  ('9502', 'Local tax per night',         11),
-  ('9503', 'Laundry',                     12),
-  ('9504', 'Software',                    13),
-  ('9505', 'TV / Telephone / Internet',   14),
-  ('9506', 'Extraordinary expenses',      15),
-  ('9507', 'Overbooking expenses',        16),
-  ('9508', 'Accounting expenses',         17),
-  ('9509', 'Booking.com commission',      18),
-  ('9510', 'Facebook ad',                 19),
-  ('9520', 'Food and vegetables',         20),
-  ('9521', 'Soft drinks and coffee',      21),
-  ('9522', 'Hotel supplies',              22),
-  ('9530', 'Electricity',                 30),
-  ('9531', 'Water',                       31),
-  ('9532', 'LPG',                         32),
-  ('9540', 'Other expenses',              40)
-) AS v(code, name, sort_order)
+  ('9501', 'Heating (pellets)',           'UTILITIES',       10),
+  ('9502', 'Local tax per night',         'TAXES',           11),
+  ('9503', 'Laundry',                     'ROOMS',           12),
+  ('9504', 'Software',                    'IT',              13),
+  ('9505', 'TV / Telephone / Internet',   'IT',              14),
+  ('9506', 'Extraordinary expenses',      'OTHER_OPERATED',  15),
+  ('9507', 'Overbooking expenses',        'OTHER_OPERATED',  16),
+  ('9508', 'Accounting expenses',         'AG',              17),
+  ('9509', 'Booking.com commission',      'SALES_MARKETING', 18),
+  ('9510', 'Facebook ad',                 'SALES_MARKETING', 19),
+  ('9520', 'Food and vegetables',         'FB',              20),
+  ('9521', 'Soft drinks and coffee',      'FB',              21),
+  ('9522', 'Hotel supplies',              'ROOMS',           22),
+  ('9530', 'Electricity',                 'UTILITIES',       30),
+  ('9531', 'Water',                       'UTILITIES',       31),
+  ('9532', 'LPG',                         'UTILITIES',       32),
+  ('9540', 'Other expenses',              'OTHER_OPERATED',  40)
+) AS v(code, name, template_code, sort_order)
+JOIN usali_department_templates t ON t.code = v.template_code
 WHERE NOT EXISTS (
   SELECT 1 FROM usali_accounts a WHERE a.code = v.code
 );

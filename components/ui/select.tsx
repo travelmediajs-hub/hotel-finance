@@ -9,11 +9,51 @@ import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
 // Context to pass value→label map from SelectItems to SelectValue
 const SelectLabelsContext = React.createContext<React.RefObject<Map<string, string>> | null>(null)
 
+function extractTextFromChildren(children: React.ReactNode): string | undefined {
+  if (typeof children === 'string') return children
+  if (typeof children === 'number') return String(children)
+  if (Array.isArray(children)) {
+    const parts = children.map(extractTextFromChildren).filter(Boolean)
+    return parts.length > 0 ? parts.join('') : undefined
+  }
+  if (children && typeof children === 'object' && 'props' in children) {
+    return extractTextFromChildren((children as React.ReactElement<{ children?: React.ReactNode }>).props.children)
+  }
+  return undefined
+}
+
+// Walks the children tree and registers value→label pairs for any element that
+// has a `value` prop (treated as a SelectItem). Runs at render time so the
+// labels are available to SelectValue before the Portal/List mounts — otherwise
+// the trigger shows the raw UUID value until the user opens the dropdown.
+function collectSelectItemLabels(
+  node: React.ReactNode,
+  labels: Map<string, string>
+): void {
+  if (!node) return
+  if (Array.isArray(node)) {
+    node.forEach(n => collectSelectItemLabels(n, labels))
+    return
+  }
+  if (typeof node === 'object' && 'props' in node) {
+    const el = node as React.ReactElement<{ value?: unknown; children?: React.ReactNode }>
+    if (el.props && el.props.value != null) {
+      const label = extractTextFromChildren(el.props.children)
+      if (label) labels.set(String(el.props.value), label.trim())
+    }
+    if (el.props?.children) collectSelectItemLabels(el.props.children, labels)
+  }
+}
+
 function Select<Value = string, Multiple extends boolean | undefined = false>({
   children,
   ...props
 }: SelectPrimitive.Root.Props<Value, Multiple>) {
   const labelsRef = React.useRef<Map<string, string>>(new Map())
+  // Rebuild the labels map on every render so SelectValue always has fresh
+  // labels, even before portal'd SelectItems mount.
+  labelsRef.current.clear()
+  collectSelectItemLabels(children, labelsRef.current)
   return (
     <SelectLabelsContext.Provider value={labelsRef}>
       <SelectPrimitive.Root {...props}>
@@ -130,19 +170,6 @@ function SelectLabel({
       {...props}
     />
   )
-}
-
-function extractTextFromChildren(children: React.ReactNode): string | undefined {
-  if (typeof children === 'string') return children
-  if (typeof children === 'number') return String(children)
-  if (Array.isArray(children)) {
-    const parts = children.map(extractTextFromChildren).filter(Boolean)
-    return parts.length > 0 ? parts.join('') : undefined
-  }
-  if (children && typeof children === 'object' && 'props' in children) {
-    return extractTextFromChildren((children as React.ReactElement<{ children?: React.ReactNode }>).props.children)
-  }
-  return undefined
 }
 
 function SelectItem({

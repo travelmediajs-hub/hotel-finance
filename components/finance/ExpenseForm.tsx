@@ -171,6 +171,7 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
     setError(null)
 
     const isCreditNote = documentType === 'CREDIT_NOTE'
+    const requiresDocNumber = documentType === 'INVOICE' || documentType === 'CREDIT_NOTE'
     if (!accountId || !supplierId || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet === 0) {
       setError('Моля, попълнете всички задължителни полета.')
       return
@@ -182,6 +183,11 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
 
     if (documentType === 'NO_DOCUMENT' && !note.trim()) {
       setError('Бележка е задължителна при липса на документ.')
+      return
+    }
+
+    if (requiresDocNumber && !documentNumber.trim()) {
+      setError('Номер на документ е задължителен за фактура и кредитно известие.')
       return
     }
 
@@ -370,7 +376,9 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="document_number">Номер на документ</Label>
+              <Label htmlFor="document_number">
+                Номер на документ{(documentType === 'INVOICE' || documentType === 'CREDIT_NOTE') ? ' *' : ''}
+              </Label>
               <Input
                 id="document_number"
                 value={documentNumber}

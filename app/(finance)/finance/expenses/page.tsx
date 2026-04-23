@@ -11,6 +11,9 @@ export default async function ExpensesPage() {
 
   const supabase = await createClient()
 
+  // Scope for non-CO users — respects the active-property cookie.
+  const allowedIds = await getUserPropertyIds(user)
+
   // --- Expenses ---
   let expenseQuery = supabase
     .from('expenses')
@@ -20,6 +23,13 @@ export default async function ExpensesPage() {
 
   if (user.role === 'DEPT_HEAD') {
     expenseQuery = expenseQuery.eq('created_by_id', user.id)
+  }
+  if (allowedIds !== null) {
+    if (allowedIds.length === 0) {
+      expenseQuery = expenseQuery.eq('property_id', '00000000-0000-0000-0000-000000000000')
+    } else {
+      expenseQuery = expenseQuery.in('property_id', allowedIds)
+    }
   }
 
   const { data: expenses, error: expError } = await expenseQuery
@@ -36,18 +46,15 @@ export default async function ExpensesPage() {
       .eq('status', 'ACTIVE')
       .order('name')
     properties = allProps ?? []
-  } else {
-    const propertyIds = await getUserPropertyIds(user)
-    if (propertyIds && propertyIds.length > 0) {
-      const { data: userProps } = await supabase
-        .from('properties')
-        .select('id, name')
-        .in('id', propertyIds)
-        .eq('status', 'ACTIVE')
-        .order('name')
-      properties = userProps ?? []
-      defaultPropertyId = properties[0]?.id
-    }
+  } else if (allowedIds && allowedIds.length > 0) {
+    const { data: userProps } = await supabase
+      .from('properties')
+      .select('id, name')
+      .in('id', allowedIds)
+      .eq('status', 'ACTIVE')
+      .order('name')
+    properties = userProps ?? []
+    defaultPropertyId = properties[0]?.id
   }
 
   const [{ data: accounts }, { data: suppliers }, { data: bankAccounts }] = await Promise.all([

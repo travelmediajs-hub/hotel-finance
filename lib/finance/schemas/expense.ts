@@ -20,17 +20,27 @@ const expenseBaseSchema = z.object({
   note: z.string().nullable().optional(),
 })
 
-export const createExpenseSchema = expenseBaseSchema.refine(
-  (data) => data.document_type !== 'NO_DOCUMENT' || (data.note && data.note.length > 0),
-  { message: 'Бележка е задължителна при липса на документ', path: ['note'] }
-)
+export const createExpenseSchema = expenseBaseSchema
+  .refine(
+    (data) => data.document_type !== 'NO_DOCUMENT' || (data.note && data.note.length > 0),
+    { message: 'Бележка е задължителна при липса на документ', path: ['note'] }
+  )
+  .refine(
+    (data) => (data.document_type !== 'INVOICE' && data.document_type !== 'CREDIT_NOTE') || !!(data.document_number && data.document_number.trim().length > 0),
+    { message: 'Номер на документ е задължителен за фактура и кредитно известие', path: ['document_number'] }
+  )
 
 export const updateExpenseSchema = expenseBaseSchema.partial()
 
-export const submitExpenseSchema = expenseBaseSchema.refine(
-  (data) => data.document_type !== 'NO_DOCUMENT' || (data.note && data.note.length > 0),
-  { message: 'Бележка е задължителна при липса на документ', path: ['note'] }
-)
+export const submitExpenseSchema = expenseBaseSchema
+  .refine(
+    (data) => data.document_type !== 'NO_DOCUMENT' || (data.note && data.note.length > 0),
+    { message: 'Бележка е задължителна при липса на документ', path: ['note'] }
+  )
+  .refine(
+    (data) => (data.document_type !== 'INVOICE' && data.document_type !== 'CREDIT_NOTE') || !!(data.document_number && data.document_number.trim().length > 0),
+    { message: 'Номер на документ е задължителен за фактура и кредитно известие', path: ['document_number'] }
+  )
 
 export const payExpenseSchema = z.object({
   expense_id: z.string().uuid(),

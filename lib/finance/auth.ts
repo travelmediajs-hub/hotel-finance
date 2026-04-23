@@ -7,6 +7,7 @@ export { isCORole } from './roles'
 
 export const SIMULATE_ROLE_COOKIE = 'finance_simulate_role'
 export const SIMULATE_PROPERTY_COOKIE = 'finance_simulate_property'
+export const ACTIVE_PROPERTY_COOKIE = 'finance_active_property'
 const VALID_ROLES: UserRole[] = ['ADMIN_CO', 'FINANCE_CO', 'MANAGER', 'DEPT_HEAD']
 
 export interface FinanceUser {
@@ -101,7 +102,63 @@ export async function getUserPropertyIds(
     return (data ?? []).map(p => p.id)
   }
 
-  // Real non-CO user → read from access table
+  // Real non-CO user → read from access table. Order the IDs by property
+  // name to match the banner/sidebar picker, so the "first accessible"
+  // fallback is consistent across UI and data scoping.
+  const supabase = await createClient()
+  const { data: access } = await supabase
+    .from('user_property_access')
+    .select('property_id')
+    .eq('user_id', user.id)
+  const rawIds = (access ?? []).map(a => a.property_id)
+  let accessibleIds: string[] = rawIds
+  if (rawIds.length > 1) {
+    const { data: props } = await supabase
+      .from('properties')
+      .select('id, name')
+      .in('id', rawIds)
+      .order('name', { ascending: true })
+    if (props && props.length > 0) {
+      accessibleIds = props.map(p => p.id)
+    }
+  }
+
+  // Scope non-CO users to a single active property at a time so their view
+  // matches the property picker in the banner/sidebar. If the cookie is
+  // missing or stale, fall back to the first accessible property (same
+  // default the layout applies when rendering the banner).
+  if (accessibleIds.length > 1) {
+    const cookieStore = await cookies()
+    const activeId = cookieStore.get(ACTIVE_PROPERTY_COOKIE)?.value
+    if (activeId && accessibleIds.includes(activeId)) {
+      return [activeId]
+    }
+    return [accessibleIds[0]]
+  }
+
+  return accessibleIds
+}
+
+/**
+ * Get the full list of accessible property IDs for a non-CO user,
+ * ignoring any active-property selection. Returns null for CO roles.
+ * Use this when you need the user's full access footprint (e.g., to
+ * render the property picker).
+ */
+export async function getAllAccessiblePropertyIds(
+  user: FinanceUser
+): Promise<string[] | null> {
+  if (isCORole(user.role)) return null
+
+  if (user.isSimulating) {
+    const supabase = await createClient()
+    const { data } = await supabase
+      .from('properties')
+      .select('id')
+      .eq('status', 'ACTIVE')
+    return (data ?? []).map(p => p.id)
+  }
+
   const supabase = await createClient()
   const { data } = await supabase
     .from('user_property_access')

@@ -73,6 +73,7 @@ interface NewRowState {
   account_id: string
   supplier_id: string
   document_type: string
+  document_number: string
   amount_net: string
   has_vat: boolean
   vat_amount: string
@@ -86,6 +87,7 @@ interface NewRowErrors {
   account_id?: boolean
   supplier_id?: boolean
   document_type?: boolean
+  document_number?: boolean
   amount_net?: boolean
   payment_method?: boolean
   payment_source_id?: boolean
@@ -132,6 +134,7 @@ export function ExpenseSpreadsheet({
     account_id: '',
     supplier_id: '',
     document_type: '',
+    document_number: '',
     amount_net: '',
     has_vat: false,
     vat_amount: '',
@@ -185,6 +188,8 @@ export function ExpenseSpreadsheet({
     if (!newRow.account_id) errs.account_id = true
     if (!newRow.supplier_id) errs.supplier_id = true
     if (!newRow.document_type) errs.document_type = true
+    const requiresDocNumber = newRow.document_type === 'INVOICE' || newRow.document_type === 'CREDIT_NOTE'
+    if (requiresDocNumber && !newRow.document_number.trim()) errs.document_number = true
     if (!newRow.amount_net || parseFloat(newRow.amount_net) <= 0) errs.amount_net = true
     if (!newRow.payment_method) errs.payment_method = true
     // Manager doesn't pick a payment source — cash goes to property register, bank goes to CO
@@ -207,6 +212,7 @@ export function ExpenseSpreadsheet({
       account_id: newRow.account_id,
       supplier_id: newRow.supplier_id,
       document_type: newRow.document_type,
+      document_number: newRow.document_number.trim() || null,
       issue_date: newRow.issue_date,
       due_date: newRow.issue_date,
       amount_net: amountNet,
@@ -279,6 +285,7 @@ export function ExpenseSpreadsheet({
         account_id: '',
         supplier_id: '',
         document_type: '',
+        document_number: '',
         amount_net: '',
         has_vat: false,
         vat_amount: '',
@@ -317,6 +324,7 @@ export function ExpenseSpreadsheet({
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Сметка</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Доставчик</th>
               <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">Документ</th>
+              <th className="px-2 py-1.5 text-left font-medium text-muted-foreground whitespace-nowrap">№</th>
               <th className="px-2 py-1.5 text-right font-medium text-muted-foreground whitespace-nowrap">Нето</th>
               <th className="px-2 py-1.5 text-right font-medium text-muted-foreground whitespace-nowrap">ДДС</th>
               <th className="px-2 py-1.5 text-right font-medium text-muted-foreground whitespace-nowrap">Общо</th>
@@ -330,7 +338,7 @@ export function ExpenseSpreadsheet({
             {/* New row — at top */}
             {canCreate && (
               <tr className="border-b border-border bg-primary/5">
-                <td className="px-1 py-1">
+                <td className="px-1 py-1 min-w-[130px]">
                   <DateInput
                     value={newRow.issue_date}
                     onChange={(e) => setField('issue_date', e.target.value)}
@@ -375,6 +383,15 @@ export function ExpenseSpreadsheet({
                     options={(Object.keys(documentTypeLabels) as DocumentType[]).map(k => ({ value: k, label: documentTypeLabels[k] }))}
                     placeholder="Документ"
                     error={errors.document_type}
+                  />
+                </td>
+                <td className="px-1 py-1 min-w-[90px]">
+                  <input
+                    type="text"
+                    placeholder={newRow.document_type === 'INVOICE' || newRow.document_type === 'CREDIT_NOTE' ? '№ *' : '№'}
+                    value={newRow.document_number}
+                    onChange={(e) => setField('document_number', e.target.value)}
+                    className={errors.document_number ? inputErrorClass : inputClass}
                   />
                 </td>
                 <td className="px-1 py-1 min-w-[80px]">
@@ -469,7 +486,7 @@ export function ExpenseSpreadsheet({
             {expenses.length === 0 && !canCreate && (
               <tr>
                 <td
-                  colSpan={isCO ? 12 : 11}
+                  colSpan={isCO ? 13 : 12}
                   className="px-2 py-8 text-center text-muted-foreground"
                 >
                   Няма разходи
@@ -497,6 +514,9 @@ export function ExpenseSpreadsheet({
                 </td>
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
                   {documentTypeLabels[expense.document_type]}
+                </td>
+                <td className="px-2 py-1 text-muted-foreground whitespace-nowrap font-mono">
+                  {expense.document_number ?? '—'}
                 </td>
                 <td className="px-2 py-1 text-right font-mono whitespace-nowrap">
                   {expense.amount_net.toFixed(2)}
@@ -541,7 +561,7 @@ export function ExpenseSpreadsheet({
               <tr className="border-t-2 border-border bg-muted/30 font-semibold">
                 <td
                   className="px-2 py-1.5 text-muted-foreground text-xs"
-                  colSpan={isCO ? 6 : 5}
+                  colSpan={isCO ? 7 : 6}
                 >
                   Общо ({expenses.length})
                 </td>

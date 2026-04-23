@@ -103,17 +103,21 @@ interface Props {
   isSimulating: boolean
   allProperties?: { id: string; name: string }[]
   simulatedPropertyId?: string | null
+  accessibleProperties?: { id: string; name: string }[]
+  activePropertyId?: string | null
 }
 
 export function FinanceSidebar({
   userFullName, userRole, realRole, isSimulating,
   allProperties = [], simulatedPropertyId = null,
+  accessibleProperties = [], activePropertyId = null,
 }: Props) {
   const pathname = usePathname()
   const router = useRouter()
   const [switching, setSwitching] = useState(false)
   const [pendingRole, setPendingRole] = useState<UserRole | null>(null)
   const [pickProperty, setPickProperty] = useState<string>(simulatedPropertyId ?? '')
+  const [switchingActive, setSwitchingActive] = useState(false)
 
   const visibleGroups = navGroups
     .map(g => ({ ...g, items: g.items.filter(item => item.roles.includes(userRole)) }))
@@ -156,6 +160,25 @@ export function FinanceSidebar({
     if (!propertyId || propertyId === simulatedPropertyId) return
     await postSimulate(userRole, propertyId)
   }
+
+  async function changeActiveProperty(propertyId: string) {
+    if (!propertyId || propertyId === activePropertyId) return
+    setSwitchingActive(true)
+    try {
+      const res = await fetch('/api/finance/active-property', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ property_id: propertyId }),
+      })
+      if (res.ok) router.refresh()
+    } finally {
+      setSwitchingActive(false)
+    }
+  }
+
+  const isRealNonCO = realRole !== 'ADMIN_CO' && realRole !== 'FINANCE_CO'
+  const showActivePropertyPicker =
+    isRealNonCO && accessibleProperties.length > 1
 
   return (
     <div className="flex flex-col h-full w-60 bg-card border-r border-border min-h-0">
@@ -273,6 +296,36 @@ export function FinanceSidebar({
             Виждате като: {roleLabels[userRole]}
           </p>
         </div>
+      )}
+
+      {showActivePropertyPicker && (
+        <>
+          <div className="px-3 py-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Building2 className="h-3 w-3 text-primary" />
+              <span className="text-[10px] font-medium text-primary uppercase tracking-wider">
+                Активен обект
+              </span>
+            </div>
+            <Select
+              value={activePropertyId ?? ''}
+              onValueChange={(v) => v && changeActiveProperty(v)}
+              disabled={switchingActive}
+            >
+              <SelectTrigger className="h-7 text-xs">
+                <SelectValue placeholder="-- избери обект --" />
+              </SelectTrigger>
+              <SelectContent>
+                {accessibleProperties.map(p => (
+                  <SelectItem key={p.id} value={p.id} className="text-xs">
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Separator className="bg-border" />
+        </>
       )}
 
       <ScrollArea className="flex-1 min-h-0 p-2">
