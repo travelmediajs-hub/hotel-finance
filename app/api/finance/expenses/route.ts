@@ -72,29 +72,12 @@ export async function POST(request: NextRequest) {
 
   // Build insert object, excluding null optional fields that may not be in schema cache
   const { bank_account_id, co_cash_id, department_id, supplier, supplier_eik, document_number, attachment_url, note, ...requiredFields } = parsed.data
-  const markPaid = body.mark_paid === true && body.payment_method === 'CASH' && user.role === 'MANAGER'
-  const managerBankTransfer = user.role === 'MANAGER' && body.payment_method === 'BANK_TRANSFER'
-  const totalAmount = parsed.data.amount_net + parsed.data.vat_amount
-  let initialStatus: string
-  if (markPaid) {
-    initialStatus = 'PAID'
-  } else if (user.role === 'ADMIN_CO' || user.role === 'FINANCE_CO') {
-    initialStatus = 'UNPAID'
-  } else if (managerBankTransfer) {
-    initialStatus = 'SENT_TO_CO'
-  } else {
-    initialStatus = 'DRAFT'
-  }
+  // All new expenses enter as UNPAID; only admin marks them as paid via the pay endpoint.
   const insertData: Record<string, unknown> = {
     ...requiredFields,
     created_by_id: user.id,
-    status: initialStatus,
-    paid_amount: markPaid ? totalAmount : 0,
-  }
-  if (markPaid) {
-    insertData.paid_at = new Date().toISOString().split('T')[0]
-    insertData.paid_by_id = user.id
-    insertData.paid_from_cash = body.paid_from_cash || 'property'
+    status: 'UNPAID',
+    paid_amount: 0,
   }
   if (bank_account_id) insertData.bank_account_id = bank_account_id
   if (co_cash_id) insertData.co_cash_id = co_cash_id
