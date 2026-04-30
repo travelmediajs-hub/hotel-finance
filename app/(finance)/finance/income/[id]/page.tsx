@@ -1,7 +1,9 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { getFinanceUser } from '@/lib/finance/auth'
+import { getFinanceUser, isCORole } from '@/lib/finance/auth'
 import { IncomeActions } from '@/components/finance/IncomeActions'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -67,6 +69,11 @@ export default async function IncomeDetailPage({ params }: Props) {
   const status = entry.status as IncomeEntryStatus
   const type = entry.type as IncomeEntryType
 
+  const editable = ['ENTERED', 'CONFIRMED', 'ADVANCE'].includes(status)
+  const sameDay =
+    new Date(entry.created_at).toDateString() === new Date().toDateString()
+  const canEdit = isCORole(user.role) && editable && sameDay
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -75,9 +82,16 @@ export default async function IncomeDetailPage({ params }: Props) {
           <CardTitle className="text-lg">
             {typeLabels[type]} — {entry.payer}
           </CardTitle>
-          <Badge variant="outline" className={statusClasses[status]}>
-            {statusLabels[status]}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {canEdit && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/finance/income/${entry.id}/edit`}>Редактирай</Link>
+              </Button>
+            )}
+            <Badge variant="outline" className={statusClasses[status]}>
+              {statusLabels[status]}
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent className="space-y-1 text-sm">
           <div>
@@ -163,11 +177,11 @@ export default async function IncomeDetailPage({ params }: Props) {
         </Card>
       )}
 
-      {/* Описание */}
+      {/* Забележка */}
       {entry.description && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Описание</CardTitle>
+            <CardTitle className="text-lg">Забележка</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm">{entry.description}</p>

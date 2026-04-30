@@ -34,35 +34,54 @@ const typeOptions: { value: IncomeEntryType; label: string }[] = [
   { value: 'CF_TRANSFER', label: 'Вътрешен трансфер' },
 ]
 
+interface InitialEntry {
+  id: string
+  entry_date: string
+  property_id: string
+  type: string
+  amount: number
+  payment_method: string
+  payer: string
+  account_id: string | null
+  bank_account_id: string | null
+  loan_id: string | null
+  period_from: string | null
+  period_to: string | null
+  description: string | null
+  attachment_url: string | null
+}
+
 interface Props {
   properties: { id: string; name: string }[]
   bankAccounts: { id: string; name: string; iban: string }[]
   loans: { id: string; name: string }[]
   accounts: UsaliAccount[]
+  entry?: InitialEntry
 }
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props) {
+export function IncomeForm({ properties, bankAccounts, loans, accounts, entry }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
+  const isEdit = !!entry
 
-  const [entryDate, setEntryDate] = useState(today)
-  const [propertyId, setPropertyId] = useState('')
-  const [type, setType] = useState('')
-  const [amount, setAmount] = useState(0)
-  const [paymentMethod, setPaymentMethod] = useState('')
-  const [payer, setPayer] = useState('')
-  const [accountId, setAccountId] = useState('')
+  const [entryDate, setEntryDate] = useState(entry?.entry_date ?? today)
+  const [propertyId, setPropertyId] = useState(entry?.property_id ?? '')
+  const [type, setType] = useState(entry?.type ?? '')
+  const [amount, setAmount] = useState(entry?.amount ?? 0)
+  const [paymentMethod, setPaymentMethod] = useState(entry?.payment_method ?? '')
+  const [payer, setPayer] = useState(entry?.payer ?? '')
+  const [accountId, setAccountId] = useState(entry?.account_id ?? '')
   const { isHidden } = useHiddenAccounts(propertyId || undefined)
-  const [bankAccountId, setBankAccountId] = useState('')
-  const [loanId, setLoanId] = useState('')
-  const [periodFrom, setPeriodFrom] = useState('')
-  const [periodTo, setPeriodTo] = useState('')
-  const [description, setDescription] = useState('')
-  const [attachmentUrl, setAttachmentUrl] = useState('')
+  const [bankAccountId, setBankAccountId] = useState(entry?.bank_account_id ?? '')
+  const [loanId, setLoanId] = useState(entry?.loan_id ?? '')
+  const [periodFrom, setPeriodFrom] = useState(entry?.period_from ?? '')
+  const [periodTo, setPeriodTo] = useState(entry?.period_to ?? '')
+  const [description, setDescription] = useState(entry?.description ?? '')
+  const [attachmentUrl, setAttachmentUrl] = useState(entry?.attachment_url ?? '')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -103,8 +122,10 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
     }
 
     try {
-      const res = await fetch('/api/finance/income', {
-        method: 'POST',
+      const url = isEdit ? `/api/finance/income/${entry!.id}` : '/api/finance/income'
+      const method = isEdit ? 'PATCH' : 'POST'
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
@@ -120,7 +141,8 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
         return
       }
 
-      router.push('/finance/income')
+      router.push(isEdit ? `/finance/income/${entry!.id}` : '/finance/income')
+      router.refresh()
     } catch {
       setError('Грешка при връзка със сървъра')
     } finally {
@@ -306,12 +328,12 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts }: Props)
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="description">Описание</Label>
+            <Label htmlFor="description">Забележка</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Допълнително описание..."
+              placeholder="Допълнителна забележка..."
               rows={3}
             />
           </div>

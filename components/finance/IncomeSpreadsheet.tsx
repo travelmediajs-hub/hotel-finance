@@ -102,6 +102,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
   const [amount, setAmount] = useState('')
   const [paymentMethod, setPaymentMethod] = useState<IncomePaymentMethod | ''>('')
   const [paymentSourceId, setPaymentSourceId] = useState('')
+  const [note, setNote] = useState('')
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -156,6 +157,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
         payer: '-',
         account_id: showCategory && accountId ? accountId : null,
         bank_account_id: selectedSource?.type === 'bank' ? selectedSource.id : null,
+        description: note.trim() || null,
       }
 
       const res = await fetch('/api/finance/income', {
@@ -195,6 +197,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
       setAmount('')
       setPaymentMethod('')
       setPaymentSourceId('')
+      setNote('')
       setFieldErrors({})
       router.refresh()
     } catch {
@@ -223,6 +226,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
               <th className="text-right px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Сума</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Плащане</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Източник</th>
+              <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Забележка</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Статус</th>
             </tr>
           </thead>
@@ -308,6 +312,15 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
                     error={fieldErrors.paymentSourceId}
                   />
                 </td>
+                <td className="px-1 py-1 min-w-[140px]">
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Забележка..."
+                    className={inputCls}
+                  />
+                </td>
                 <td className="px-1 py-1 whitespace-nowrap">
                   <button
                     onClick={handleSave}
@@ -322,7 +335,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
 
             {entries.length === 0 && !canCreate && (
               <tr>
-                <td colSpan={8} className="text-center text-muted-foreground py-8">
+                <td colSpan={9} className="text-center text-muted-foreground py-8">
                   Няма приходни записи
                 </td>
               </tr>
@@ -353,6 +366,9 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
                   —
                 </td>
+                <td className="px-2 py-1 text-muted-foreground max-w-[200px] truncate" title={entry.description ?? ''}>
+                  {entry.description ?? '—'}
+                </td>
                 <td className="px-2 py-1">
                   <Badge
                     variant="outline"
@@ -373,7 +389,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
                 <td className="px-2 py-1.5 text-right font-mono text-xs">
                   {total.toFixed(2)} €
                 </td>
-                <td colSpan={4} />
+                <td colSpan={5} />
               </tr>
             )}
           </tbody>

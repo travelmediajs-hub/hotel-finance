@@ -20,18 +20,15 @@ export function IncomeActions({ entryId, status, type, userRole }: Props) {
   const [error, setError] = useState<string | null>(null)
 
   const isCO = isCORole(userRole)
-  const canConfirm = isCO && status === 'ENTERED'
   const canRealize = isCO && status === 'ADVANCE' && type === 'INC_ADV'
 
-  const hasActions = canConfirm || canRealize
+  if (!canRealize) return null
 
-  if (!hasActions) return null
-
-  async function performAction(action: 'confirm' | 'realize') {
+  async function performRealize() {
     setError(null)
     setLoading(true)
     try {
-      const res = await fetch(`/api/finance/income/${entryId}/${action}`, {
+      const res = await fetch(`/api/finance/income/${entryId}/realize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
@@ -58,17 +55,9 @@ export function IncomeActions({ entryId, status, type, userRole }: Props) {
         )}
 
         <div className="flex flex-wrap gap-3">
-          {canConfirm && (
-            <Button disabled={loading} onClick={() => performAction('confirm')}>
-              {loading ? 'Потвърждаване...' : 'Потвърди'}
-            </Button>
-          )}
-
-          {canRealize && (
-            <Button disabled={loading} onClick={() => performAction('realize')}>
-              {loading ? 'Реализиране...' : 'Реализирай аванс'}
-            </Button>
-          )}
+          <Button disabled={loading} onClick={performRealize}>
+            {loading ? 'Реализиране...' : 'Реализирай аванс'}
+          </Button>
         </div>
       </CardContent>
     </Card>

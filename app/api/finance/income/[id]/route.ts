@@ -29,11 +29,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  // Editable until marked as paid/confirmed/realized
-  const editableStatuses = ['ENTERED', 'ADVANCE']
+  // Editable except after realization
+  const editableStatuses = ['ENTERED', 'CONFIRMED', 'ADVANCE']
   if (!editableStatuses.includes(entry.status)) {
     return NextResponse.json(
-      { error: 'invalid_status', message: 'Приходът не може да се редактира след потвърждаване/реализиране' },
+      { error: 'invalid_status', message: 'Приходът не може да се редактира след реализиране' },
       { status: 400 }
     )
   }

@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createClient()
 
-  const status = parsed.data.type === 'INC_ADV' ? 'ADVANCE' : 'ENTERED'
+  const status = parsed.data.type === 'INC_ADV' ? 'ADVANCE' : 'CONFIRMED'
 
   const { data, error } = await supabase
     .from('income_entries')
