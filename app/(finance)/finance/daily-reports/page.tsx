@@ -177,6 +177,7 @@ export default async function DailyReportsPage({ searchParams }: Props) {
         </CardHeader>
         <CardContent className="p-0">
           <DailyReportTable
+            key={selectedPropertyId}
             reports={(reports as Parameters<typeof DailyReportTable>[0]['reports']) ?? []}
             departments={departments ?? []}
             userRole={user.role}
