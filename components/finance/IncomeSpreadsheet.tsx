@@ -227,7 +227,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Плащане</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Източник</th>
               <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Забележка</th>
-              <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap">Статус</th>
+              <th className="text-left px-2 py-1 font-medium text-muted-foreground whitespace-nowrap"></th>
             </tr>
           </thead>
           <tbody>
@@ -369,14 +369,7 @@ export function IncomeSpreadsheet({ entries: initialEntries, properties, bankAcc
                 <td className="px-2 py-1 text-muted-foreground max-w-[200px] truncate" title={entry.description ?? ''}>
                   {entry.description ?? '—'}
                 </td>
-                <td className="px-2 py-1">
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] px-1 py-0 ${statusClasses[entry.status]}`}
-                  >
-                    {statusLabels[entry.status]}
-                  </Badge>
-                </td>
+                <td className="px-2 py-1" />
               </tr>
             ))}
 

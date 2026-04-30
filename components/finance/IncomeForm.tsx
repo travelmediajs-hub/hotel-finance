@@ -57,13 +57,14 @@ interface Props {
   loans: { id: string; name: string }[]
   accounts: UsaliAccount[]
   entry?: InitialEntry
+  onSuccess?: () => void
 }
 
 function toDateString(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
-export function IncomeForm({ properties, bankAccounts, loans, accounts, entry }: Props) {
+export function IncomeForm({ properties, bankAccounts, loans, accounts, entry, onSuccess }: Props) {
   const router = useRouter()
   const today = toDateString(new Date())
   const isEdit = !!entry
@@ -141,8 +142,13 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts, entry }:
         return
       }
 
-      router.push(isEdit ? `/finance/income/${entry!.id}` : '/finance/income')
-      router.refresh()
+      if (onSuccess) {
+        onSuccess()
+        router.refresh()
+      } else {
+        router.push(isEdit ? `/finance/income/${entry!.id}` : '/finance/income')
+        router.refresh()
+      }
     } catch {
       setError('Грешка при връзка със сървъра')
     } finally {

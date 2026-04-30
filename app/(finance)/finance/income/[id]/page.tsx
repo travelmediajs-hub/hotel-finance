@@ -1,12 +1,10 @@
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getFinanceUser, isCORole } from '@/lib/finance/auth'
 import { IncomeActions } from '@/components/finance/IncomeActions'
-import { buttonVariants } from '@/components/ui/button'
+import { IncomeEditButton } from '@/components/finance/IncomeEditButton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import type {
   IncomeEntryType, IncomePaymentMethod, IncomeEntryStatus,
 } from '@/types/finance'
@@ -74,6 +72,37 @@ export default async function IncomeDetailPage({ params }: Props) {
     new Date(entry.created_at).toDateString() === new Date().toDateString()
   const canEdit = isCORole(user.role) && editable && sameDay
 
+  // Load form dependencies only when editing is possible
+  let editDeps: {
+    properties: { id: string; name: string }[]
+    bankAccounts: { id: string; name: string; iban: string }[]
+    loans: { id: string; name: string }[]
+    accounts: Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>
+  } | null = null
+  if (canEdit) {
+    const [
+      { data: properties },
+      { data: bankAccounts },
+      { data: loans },
+      { data: accounts },
+    ] = await Promise.all([
+      supabase.from('properties').select('id, name').eq('status', 'ACTIVE').order('name'),
+      supabase.from('bank_accounts').select('id, name, iban').eq('status', 'ACTIVE').order('name'),
+      supabase.from('loans').select('id, name').eq('status', 'ACTIVE').order('name'),
+      supabase.from('usali_accounts')
+        .select('id, code, name, level, account_type, parent_id')
+        .eq('is_active', true)
+        .eq('account_type', 'REVENUE')
+        .order('sort_order'),
+    ])
+    editDeps = {
+      properties: (properties ?? []) as { id: string; name: string }[],
+      bankAccounts: (bankAccounts ?? []) as { id: string; name: string; iban: string }[],
+      loans: (loans ?? []) as { id: string; name: string }[],
+      accounts: (accounts ?? []) as Array<{ id: string; code: string; name: string; level: number; account_type: string; parent_id: string | null }>,
+    }
+  }
+
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       {/* Header */}
@@ -83,13 +112,14 @@ export default async function IncomeDetailPage({ params }: Props) {
             {typeLabels[type]} — {entry.payer}
           </CardTitle>
           <div className="flex items-center gap-2">
-            {canEdit && (
-              <Link
-                href={`/finance/income/${entry.id}/edit`}
-                className={buttonVariants({ variant: 'outline', size: 'sm' })}
-              >
-                Редактирай
-              </Link>
+            {canEdit && editDeps && (
+              <IncomeEditButton
+                entry={entry}
+                properties={editDeps.properties}
+                bankAccounts={editDeps.bankAccounts}
+                loans={editDeps.loans}
+                accounts={editDeps.accounts}
+              />
             )}
             <Badge variant="outline" className={statusClasses[status]}>
               {statusLabels[status]}
