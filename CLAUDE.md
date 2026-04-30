@@ -17,6 +17,8 @@ npm run lint     # ESLint
 
 Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. No test framework is configured.
 
+`postinstall` runs `scripts/fix-lightningcss.js`, which patches the lightningcss native binary location so Turbopack can resolve it on Windows. If you hit a `Cannot find module '../lightningcss.<platform>.node'` error, re-run `npm install` to retrigger it.
+
 ## Architecture
 
 **Route groups** separate concerns: `app/(auth)` for login/register, `app/(finance)` for the protected finance module. Root `/` redirects to `/finance/dashboard`. The `(finance)/layout.tsx` calls `getFinanceUser()` and renders `FinanceSidebar`; unauthenticated visits redirect to `/login`.
@@ -24,6 +26,8 @@ Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_
 **Auth flow:** Supabase cookie-based auth via `@supabase/ssr`. `middleware.ts` protects `/finance/**`, bounces authenticated users away from auth pages, and fast-paths public pages when no `sb-*` cookie is present. Two client factories: `lib/supabase/server.ts` (server components/API routes, uses cookies) and `lib/supabase/client.ts` (browser).
 
 **Roles & RBAC:** Four roles — `ADMIN_CO`, `FINANCE_CO`, `MANAGER`, `DEPT_HEAD` (see `types/finance.ts`). CO roles see all properties; others are scoped via the `user_property_access` table. Fine-grained permissions live in the `permissions` / `roles` / `role_permissions` tables and are checked with `hasPermission()` in `lib/finance/permissions.ts`. **Role simulation:** `ADMIN_CO` can impersonate other roles via `finance_simulate_role` / `finance_simulate_property` cookies — `getFinanceUser()` returns the effective `role` plus the real `realRole`.
+
+**Active-property scoping:** Non-CO users with access to multiple properties are scoped to a single active property at a time via the `finance_active_property` cookie (see `getUserPropertyIds()` in `lib/finance/auth.ts`). The picker in the sidebar/banner sets this cookie via `/api/finance/active-property`; if missing or stale, the first accessible property (alphabetical by name) is used. Use `getAllAccessiblePropertyIds()` when you need the full access footprint (e.g., to render the picker itself).
 
 **API route pattern** (`app/api/finance/**/route.ts`):
 1. `const user = await getFinanceUser()` — 401 if null
@@ -33,6 +37,8 @@ Requires `.env.local` with `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_
 5. Call `revalidatePath()` after mutations
 
 **Finance domain:** Daily reports, expenses, income, transfers (in-transits, cash collections, money received), banking (accounts, transactions, loans, revolving credits), monthly reports, suppliers, chart of accounts, USALI reports, properties, payroll, admin. Each area has its own route segment under `app/(finance)/finance/` and matching API under `app/api/finance/`.
+
+**Operational P&L (USALI):** `lib/finance/opreport/` holds the report engine — `template.ts` (account/section structure), `formula.ts` (cell formula parser), `compute.ts` (period rollups from journal data), `periods.ts` (date range helpers), `xlsx.ts` (Excel export). The print-friendly variant lives at `app/(finance)/finance/usali-reports/print/`.
 
 **Database:** Postgres via Supabase with RLS policies. 30+ migrations in `supabase/migrations/` are numbered chronologically (`YYYYMMDDHHMMSS_*.sql`) — always add new migrations with a later timestamp rather than editing existing ones.
 
