@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getFinanceUser, isCORole } from '@/lib/finance/auth'
 import { IncomeActions } from '@/components/finance/IncomeActions'
-import { Button } from '@/components/ui/button'
+import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
@@ -84,9 +84,12 @@ export default async function IncomeDetailPage({ params }: Props) {
           </CardTitle>
           <div className="flex items-center gap-2">
             {canEdit && (
-              <Button asChild variant="outline" size="sm">
-                <Link href={`/finance/income/${entry.id}/edit`}>Редактирай</Link>
-              </Button>
+              <Link
+                href={`/finance/income/${entry.id}/edit`}
+                className={buttonVariants({ variant: 'outline', size: 'sm' })}
+              >
+                Редактирай
+              </Link>
             )}
             <Badge variant="outline" className={statusClasses[status]}>
               {statusLabels[status]}
