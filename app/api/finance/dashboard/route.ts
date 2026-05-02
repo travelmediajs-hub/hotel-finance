@@ -248,19 +248,20 @@ export async function GET() {
 
   // --- Unpaid expenses grouped by supplier ---
   const unpaidRaw = pendingExpensesResult.data ?? []
-  const supplierMap = new Map<string, { name: string; remaining: number; count: number }>()
+  const supplierMap = new Map<string, { supplier_id: string | null; name: string; remaining: number; count: number }>()
   let unpaidTotal = 0
   for (const exp of unpaidRaw) {
     const remaining = (exp.total_amount as number) - ((exp.paid_amount as number) ?? 0)
     unpaidTotal += remaining
     const supplierName = ((exp.suppliers as unknown as { name: string }) ?? { name: 'Без доставчик' }).name
-    const key = exp.supplier_id ?? '__none__'
+    const supplierId = (exp.supplier_id as string | null) ?? null
+    const key = supplierId ?? '__none__'
     const existing = supplierMap.get(key)
     if (existing) {
       existing.remaining += remaining
       existing.count += 1
     } else {
-      supplierMap.set(key, { name: supplierName, remaining, count: 1 })
+      supplierMap.set(key, { supplier_id: supplierId, name: supplierName, remaining, count: 1 })
     }
   }
   const unpaid_by_supplier = Array.from(supplierMap.values())

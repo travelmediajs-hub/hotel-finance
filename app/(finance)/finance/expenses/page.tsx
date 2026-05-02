@@ -5,11 +5,16 @@ import { ExpenseSpreadsheet } from '@/components/finance/ExpenseSpreadsheet'
 import type { ExpenseWithJoins } from '@/components/finance/ExpenseSpreadsheet'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-export default async function ExpensesPage() {
+interface PageProps {
+  searchParams: Promise<{ supplier_id?: string; status?: string; property_id?: string }>
+}
+
+export default async function ExpensesPage({ searchParams }: PageProps) {
   const user = await getFinanceUser()
   if (!user) redirect('/finance')
 
   const supabase = await createClient()
+  const { supplier_id, status, property_id: filterPropertyId } = await searchParams
 
   // Scope for non-CO users — respects the active-property cookie.
   const allowedIds = await getUserPropertyIds(user)
@@ -29,6 +34,27 @@ export default async function ExpensesPage() {
       expenseQuery = expenseQuery.eq('property_id', '00000000-0000-0000-0000-000000000000')
     } else {
       expenseQuery = expenseQuery.in('property_id', allowedIds)
+    }
+  }
+
+  // Optional filters from query string (e.g. linked from dashboard / property report)
+  if (supplier_id) {
+    expenseQuery = expenseQuery.eq('supplier_id', supplier_id)
+  }
+  if (status) {
+    const statuses = status.split(',').map(s => s.trim()).filter(Boolean)
+    if (statuses.length > 0) {
+      expenseQuery = expenseQuery.in('status', statuses)
+    }
+  }
+  // Narrow to a specific property when requested (must intersect with the
+  // user's allowed scope — non-CO users can't widen via this param).
+  if (filterPropertyId) {
+    if (allowedIds === null || allowedIds.includes(filterPropertyId)) {
+      expenseQuery = expenseQuery.eq('property_id', filterPropertyId)
+    } else {
+      // Requested property is outside the user's scope — return empty set
+      expenseQuery = expenseQuery.eq('property_id', '00000000-0000-0000-0000-000000000000')
     }
   }
 

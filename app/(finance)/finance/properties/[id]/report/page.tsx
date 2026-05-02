@@ -46,7 +46,9 @@ export default async function PropertyReportPage({ params, searchParams }: Props
 
   const today = new Date()
   const todayIso = today.toISOString().slice(0, 10)
-  const defFrom = parseDate(from) || todayIso
+  // Default range: current month (1st → today). Override via ?from=&to=
+  const monthStartIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-01`
+  const defFrom = parseDate(from) || monthStartIso
   const defTo = parseDate(to) || todayIso
 
   const { data: property } = await supabase.from('properties').select('*').eq('id', id).single()
@@ -68,7 +70,7 @@ export default async function PropertyReportPage({ params, searchParams }: Props
     supabase.from('property_cash_balances').select('current_balance').eq('property_id', id).maybeSingle(),
     supabase
       .from('expenses')
-      .select('supplier, amount_net, vat_amount, status')
+      .select('supplier, supplier_id, amount_net, vat_amount, status, suppliers(name)')
       .eq('property_id', id)
       .neq('status', 'PAID'),
     supabase
@@ -136,19 +138,6 @@ export default async function PropertyReportPage({ params, searchParams }: Props
   type ExpEntry = { date: string; supplier: string; total: number; status: string }
   type ExpMonth = { ym: string; total: number; entries: ExpEntry[] }
   type ExpCategory = { code: string; name: string; total: number; months: ExpMonth[] }
-  const CAT_LABELS: Record<string, string> = {
-    CONSUMABLES: 'Консумативи',
-    SALARIES: 'Заплати',
-    FOOD_KITCHEN: 'Храни / Кухня',
-    FUEL: 'Гориво',
-    TAXES_FEES: 'Данъци и такси',
-    MAINTENANCE: 'Поддръжка',
-    UTILITIES: 'Консумативи (ток/вода)',
-    MARKETING: 'Маркетинг',
-    INSURANCE: 'Застраховки',
-    ACCOUNTING: 'Счетоводство',
-    OTHER: 'Други',
-  }
   const catMap = new Map<string, ExpCategory>()
   for (const r of expenses as any[]) {
     const ua = r.usali_accounts
@@ -181,19 +170,24 @@ export default async function PropertyReportPage({ params, searchParams }: Props
   }
   const categories = Array.from(catMap.values()).sort((a, b) => b.total - a.total)
 
-  // Unpaid by supplier
-  const unpaidBySupplier = new Map<string, { total: number; count: number }>()
+  // Unpaid by supplier (resolve name from joined suppliers row, fall back to text column)
+  const unpaidBySupplier = new Map<string, { supplier_id: string | null; supplier: string; total: number; count: number }>()
   let unpaidTotal = 0
   for (const r of unpaid as any[]) {
     const t = Number(r.amount_net || 0) + Number(r.vat_amount || 0)
     unpaidTotal += t
-    const cur = unpaidBySupplier.get(r.supplier) ?? { total: 0, count: 0 }
+    const supplierName: string =
+      (r.suppliers && typeof r.suppliers === 'object' && r.suppliers.name) ||
+      r.supplier ||
+      'Без доставчик'
+    const supplierId: string | null = r.supplier_id ?? null
+    const key = supplierId ?? `__name__${supplierName}`
+    const cur = unpaidBySupplier.get(key) ?? { supplier_id: supplierId, supplier: supplierName, total: 0, count: 0 }
     cur.total += t
     cur.count += 1
-    unpaidBySupplier.set(r.supplier, cur)
+    unpaidBySupplier.set(key, cur)
   }
-  const unpaidList = Array.from(unpaidBySupplier.entries())
-    .map(([supplier, v]) => ({ supplier, ...v }))
+  const unpaidList = Array.from(unpaidBySupplier.values())
     .sort((a, b) => b.total - a.total)
 
   return (
@@ -336,7 +330,7 @@ export default async function PropertyReportPage({ params, searchParams }: Props
           {unpaidList.length === 0 ? (
             <p className="text-sm text-muted-foreground">Няма неплатени задължения.</p>
           ) : (
-            <UnpaidSuppliersList items={unpaidList} total={unpaidTotal} invoiceCount={unpaid.length} />
+            <UnpaidSuppliersList items={unpaidList} total={unpaidTotal} invoiceCount={unpaid.length} propertyId={id} />
           )}
         </CardContent>
       </Card>

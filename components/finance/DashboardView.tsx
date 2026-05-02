@@ -68,6 +68,7 @@ interface RevolvingCredit {
 }
 
 interface UnpaidBySupplier {
+  supplier_id: string | null
   name: string
   remaining: number
   count: number
@@ -480,8 +481,19 @@ export function DashboardView() {
                 </TableHeader>
                 <TableBody>
                   {unpaid_expenses.by_supplier.map(s => (
-                    <TableRow key={s.name}>
-                      <TableCell className="font-medium">{s.name}</TableCell>
+                    <TableRow key={s.supplier_id ?? s.name}>
+                      <TableCell className="font-medium">
+                        {s.supplier_id ? (
+                          <Link
+                            href={`/finance/expenses?supplier_id=${s.supplier_id}&status=UNPAID,PARTIAL`}
+                            className="hover:underline text-foreground hover:text-primary transition-colors"
+                          >
+                            {s.name}
+                          </Link>
+                        ) : (
+                          s.name
+                        )}
+                      </TableCell>
                       <TableCell className="text-right text-muted-foreground">{s.count}</TableCell>
                       <TableCell className="text-right font-mono text-red-400">{formatAmount(s.remaining)}</TableCell>
                     </TableRow>
