@@ -22,7 +22,7 @@ export type PaymentMethod = 'BANK_TRANSFER' | 'CASH' | 'CARD' | 'OTHER'
 
 export type ExpenseStatus =
   | 'DRAFT' | 'UNPAID' | 'SENT_TO_CO' | 'APPROVED'
-  | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'REJECTED'
+  | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'REJECTED' | 'RETURNED'
 
 export type CashCollectionStatus = 'SENT' | 'RECEIVED' | 'ACCOUNTED'
 
