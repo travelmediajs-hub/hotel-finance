@@ -8,7 +8,9 @@ export const createIncomeEntrySchema = z.object({
     'INC_CREDIT_NOTE',
     'CF_CREDIT', 'CF_TRANSFER',
   ]),
-  amount: z.number().refine(v => v !== 0, { message: 'Сумата не може да е 0' }),
+  // Always positive on input — server applies the sign based on type
+  // (negative for INC_CREDIT_NOTE, positive otherwise).
+  amount: z.number().positive({ message: 'Сумата трябва да е положителна' }),
   bank_account_id: z.string().uuid().nullable().optional(),
   payment_method: z.enum(['BANK', 'CASH']),
   payer: z.string().min(1),
@@ -30,7 +32,7 @@ export const updateIncomeEntrySchema = z.object({
     'INC_CREDIT_NOTE',
     'CF_CREDIT', 'CF_TRANSFER',
   ]).optional(),
-  amount: z.number().refine(v => v !== 0, { message: 'Сумата не може да е 0' }).optional(),
+  amount: z.number().positive({ message: 'Сумата трябва да е положителна' }).optional(),
   bank_account_id: z.string().uuid().nullable().optional(),
   payment_method: z.enum(['BANK', 'CASH']).optional(),
   payer: z.string().min(1).optional(),

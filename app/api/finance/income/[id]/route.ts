@@ -47,6 +47,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
+  // Apply sign convention based on the effective type after this update.
+  const effectiveType = parsed.data.type ?? entry.type
+  if (effectiveType === 'INC_CREDIT_NOTE' && parsed.data.amount !== undefined) {
+    parsed.data.amount = -Math.abs(parsed.data.amount)
+  }
+
   const { data, error } = await supabase
     .from('income_entries')
     .update(parsed.data)

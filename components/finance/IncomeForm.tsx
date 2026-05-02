@@ -72,7 +72,8 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts, entry, o
   const [entryDate, setEntryDate] = useState(entry?.entry_date ?? today)
   const [propertyId, setPropertyId] = useState(entry?.property_id ?? '')
   const [type, setType] = useState(entry?.type ?? '')
-  const [amount, setAmount] = useState(entry?.amount ?? 0)
+  // Display value is always positive — server applies the sign based on type.
+  const [amount, setAmount] = useState(Math.abs(entry?.amount ?? 0))
   const [paymentMethod, setPaymentMethod] = useState(entry?.payment_method ?? '')
   const [payer, setPayer] = useState(entry?.payer ?? '')
   const [accountId, setAccountId] = useState(entry?.account_id ?? '')
@@ -94,13 +95,8 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts, entry, o
     e.preventDefault()
     setError(null)
 
-    const isCreditNote = type === 'INC_CREDIT_NOTE'
-    if (!entryDate || !propertyId || !type || !paymentMethod || !payer.trim() || amount === 0 || !accountId) {
-      setError('Моля, попълнете всички задължителни полета.')
-      return
-    }
-    if (!isCreditNote && amount < 0) {
-      setError('Сумата трябва да е положителна (освен при кредитно известие).')
+    if (!entryDate || !propertyId || !type || !paymentMethod || !payer.trim() || amount <= 0 || !accountId) {
+      setError('Моля, попълнете всички задължителни полета. Сумата трябва да е положителна.')
       return
     }
 
@@ -210,7 +206,7 @@ export function IncomeForm({ properties, bankAccounts, loans, accounts, entry, o
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="amount">Сума * {type === 'INC_CREDIT_NOTE' && <span className="text-xs text-orange-400">(отрицателна при КИ)</span>}</Label>
+              <Label htmlFor="amount">Сума * {type === 'INC_CREDIT_NOTE' && <span className="text-xs text-amber-500">(КИ — въведи положително число)</span>}</Label>
               <Input
                 id="amount"
                 type="number"

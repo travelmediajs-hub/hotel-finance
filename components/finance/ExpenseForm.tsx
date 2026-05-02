@@ -95,9 +95,11 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
   const [documentNumber, setDocumentNumber] = useState(initialExpense?.document_number ?? '')
   const [issueDate, setIssueDate] = useState(initialExpense?.issue_date ?? today)
   const [dueDate, setDueDate] = useState(initialExpense?.due_date ?? today)
-  const [amountNet, setAmountNet] = useState(Number(initialExpense?.amount_net ?? 0))
-  const [hasVat, setHasVat] = useState(Number(initialExpense?.vat_amount ?? 0) > 0)
-  const [vatAmount, setVatAmount] = useState(Number(initialExpense?.vat_amount ?? 0))
+  // Display values are always positive — the server applies the sign based on
+  // document_type. Loading an existing CREDIT_NOTE shows abs() values.
+  const [amountNet, setAmountNet] = useState(Math.abs(Number(initialExpense?.amount_net ?? 0)))
+  const [hasVat, setHasVat] = useState(Math.abs(Number(initialExpense?.vat_amount ?? 0)) > 0)
+  const [vatAmount, setVatAmount] = useState(Math.abs(Number(initialExpense?.vat_amount ?? 0)))
   const [paymentMethod, setPaymentMethod] = useState(initialExpense?.payment_method ?? '')
   const [attachmentUrl, setAttachmentUrl] = useState(initialExpense?.attachment_url ?? '')
   const [note, setNote] = useState(initialExpense?.note ?? '')
@@ -170,14 +172,9 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
   async function handleSave(isDraft: boolean) {
     setError(null)
 
-    const isCreditNote = documentType === 'CREDIT_NOTE'
     const requiresDocNumber = documentType === 'INVOICE' || documentType === 'CREDIT_NOTE'
-    if (!accountId || !supplierId || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet === 0) {
-      setError('Моля, попълнете всички задължителни полета.')
-      return
-    }
-    if (!isCreditNote && amountNet < 0) {
-      setError('Сумата трябва да е положителна (освен при кредитно известие).')
+    if (!accountId || !supplierId || !documentType || !issueDate || !dueDate || !paymentMethod || amountNet <= 0) {
+      setError('Моля, попълнете всички задължителни полета. Сумата трябва да е положителна.')
       return
     }
 
@@ -408,7 +405,7 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="amount_net">Нето сума * {documentType === 'CREDIT_NOTE' && <span className="text-xs text-orange-400">(отрицателна при КИ)</span>}</Label>
+              <Label htmlFor="amount_net">Нето сума * {documentType === 'CREDIT_NOTE' && <span className="text-xs text-amber-500">(КИ — въведи положително число)</span>}</Label>
               <Input
                 id="amount_net"
                 type="number"
@@ -432,8 +429,7 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
                       const checked = e.target.checked
                       setHasVat(checked)
                       if (checked) {
-                        const sign = amountNet < 0 ? -1 : 1
-                        setVatAmount(Math.round(Math.abs(amountNet) * 20) / 100 * sign)
+                        setVatAmount(Math.round(amountNet * 20) / 100)
                       } else {
                         setVatAmount(0)
                       }

@@ -193,9 +193,7 @@ export function ExpenseSpreadsheet({
     const requiresDocNumber = newRow.document_type === 'INVOICE' || newRow.document_type === 'CREDIT_NOTE'
     if (requiresDocNumber && !newRow.document_number.trim()) errs.document_number = true
     const amountNet = parseFloat(newRow.amount_net)
-    const isCreditNote = newRow.document_type === 'CREDIT_NOTE'
-    if (!newRow.amount_net || isNaN(amountNet) || amountNet === 0) errs.amount_net = true
-    else if (!isCreditNote && amountNet < 0) errs.amount_net = true
+    if (!newRow.amount_net || isNaN(amountNet) || amountNet <= 0) errs.amount_net = true
     if (!newRow.payment_method) errs.payment_method = true
     // Manager doesn't pick a payment source — cash goes to property register, bank goes to CO
     // CO doesn't need to pick a source when creating — it's set at payment time

@@ -77,6 +77,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
+  // Apply sign convention based on the effective document_type after this
+  // update (either the patched value or the stored one). Server is the single
+  // source of truth for the sign; client always sends positive amounts.
+  const effectiveDocType = parsed.data.document_type ?? expense.document_type
+  if (effectiveDocType === 'CREDIT_NOTE') {
+    if (parsed.data.amount_net !== undefined) {
+      parsed.data.amount_net = -Math.abs(parsed.data.amount_net)
+    }
+    if (parsed.data.vat_amount !== undefined) {
+      parsed.data.vat_amount = -Math.abs(parsed.data.vat_amount)
+    }
+  }
+
   // For paid cash expenses, sync paid_amount with edited net/vat so the
   // property cash register view reflects the corrected total.
   const updateFields: Record<string, unknown> = {

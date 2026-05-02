@@ -70,6 +70,14 @@ export async function POST(request: NextRequest) {
 
   const supabase = await createClient()
 
+  // Apply sign convention: credit notes are stored as negative amounts so they
+  // offset invoices in aggregations. Input is always positive (validated by
+  // schema); server is the single source of truth for the sign.
+  if (parsed.data.document_type === 'CREDIT_NOTE') {
+    parsed.data.amount_net = -Math.abs(parsed.data.amount_net)
+    parsed.data.vat_amount = -Math.abs(parsed.data.vat_amount)
+  }
+
   // Build insert object, excluding null optional fields that may not be in schema cache
   const { bank_account_id, co_cash_id, department_id, supplier, supplier_eik, document_number, attachment_url, note, ...requiredFields } = parsed.data
   // All new expenses enter as UNPAID; only admin marks them as paid via the pay endpoint.

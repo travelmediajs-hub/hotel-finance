@@ -81,6 +81,12 @@ export async function POST(request: NextRequest) {
 
   const status = parsed.data.type === 'INC_ADV' ? 'ADVANCE' : 'CONFIRMED'
 
+  // Apply sign convention: credit notes are stored as negative amounts so they
+  // offset other income entries in aggregations.
+  if (parsed.data.type === 'INC_CREDIT_NOTE') {
+    parsed.data.amount = -Math.abs(parsed.data.amount)
+  }
+
   const { data, error } = await supabase
     .from('income_entries')
     .insert({

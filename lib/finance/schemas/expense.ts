@@ -11,8 +11,10 @@ const expenseBaseSchema = z.object({
   document_number: z.string().nullable().optional(),
   issue_date: z.string().date(),
   due_date: z.string().date(),
-  amount_net: z.number().refine(v => v !== 0, { message: 'Сумата не може да е 0' }),
-  vat_amount: z.number(),
+  // Always positive on input — the server applies the correct sign based on
+  // document_type (negative for CREDIT_NOTE, positive otherwise).
+  amount_net: z.number().positive({ message: 'Сумата трябва да е положителна' }),
+  vat_amount: z.number().nonnegative(),
   payment_method: z.enum(['BANK_TRANSFER', 'CASH', 'CARD', 'OTHER']),
   bank_account_id: z.string().uuid().nullable().optional(),
   co_cash_id: z.string().uuid().nullable().optional(),
