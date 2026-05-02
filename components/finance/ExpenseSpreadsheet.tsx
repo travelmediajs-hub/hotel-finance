@@ -190,7 +190,10 @@ export function ExpenseSpreadsheet({
     if (!newRow.document_type) errs.document_type = true
     const requiresDocNumber = newRow.document_type === 'INVOICE' || newRow.document_type === 'CREDIT_NOTE'
     if (requiresDocNumber && !newRow.document_number.trim()) errs.document_number = true
-    if (!newRow.amount_net || parseFloat(newRow.amount_net) <= 0) errs.amount_net = true
+    const amountNet = parseFloat(newRow.amount_net)
+    const isCreditNote = newRow.document_type === 'CREDIT_NOTE'
+    if (!newRow.amount_net || isNaN(amountNet) || amountNet === 0) errs.amount_net = true
+    else if (!isCreditNote && amountNet < 0) errs.amount_net = true
     if (!newRow.payment_method) errs.payment_method = true
     // Manager doesn't pick a payment source — cash goes to property register, bank goes to CO
     // CO doesn't need to pick a source when creating — it's set at payment time
@@ -463,20 +466,24 @@ export function ExpenseSpreadsheet({
                     onClick={() => handleSave(false)}
                     className="px-2 py-0.5 text-xs rounded bg-primary text-primary-foreground hover:bg-primary/80 disabled:opacity-50 whitespace-nowrap"
                     title={
-                      newRow.payment_method === 'CASH'
-                        ? 'Записва и маркира като платен от касата'
-                        : newRow.payment_method === 'BANK_TRANSFER'
-                          ? 'Записва и изпраща към ЦО за плащане'
-                          : 'Запази'
+                      newRow.document_type === 'CREDIT_NOTE'
+                        ? 'Запази кредитното известие'
+                        : newRow.payment_method === 'CASH'
+                          ? 'Записва и маркира като платен от касата'
+                          : newRow.payment_method === 'BANK_TRANSFER'
+                            ? 'Записва и изпраща към ЦО за плащане'
+                            : 'Запази'
                     }
                   >
                     {loading
                       ? '...'
-                      : newRow.payment_method === 'CASH'
-                        ? 'Плати от каса'
-                        : newRow.payment_method === 'BANK_TRANSFER'
-                          ? 'Изпрати към ЦО'
-                          : 'Запази'}
+                      : newRow.document_type === 'CREDIT_NOTE'
+                        ? 'Запази КИ'
+                        : newRow.payment_method === 'CASH'
+                          ? 'Плати от каса'
+                          : newRow.payment_method === 'BANK_TRANSFER'
+                            ? 'Изпрати към ЦО'
+                            : 'Запази'}
                   </button>
                 </td>
                 <td />
@@ -512,8 +519,14 @@ export function ExpenseSpreadsheet({
                 <td className="px-2 py-1 text-muted-foreground max-w-[140px] truncate">
                   {expense.suppliers?.name ?? expense.supplier}
                 </td>
-                <td className="px-2 py-1 text-muted-foreground whitespace-nowrap">
-                  {documentTypeLabels[expense.document_type]}
+                <td className="px-2 py-1 whitespace-nowrap">
+                  {expense.document_type === 'CREDIT_NOTE' ? (
+                    <Badge className="text-[0.65rem] px-1 py-0 bg-amber-500/15 text-amber-500 border-amber-500/30 hover:bg-amber-500/15">
+                      КИ
+                    </Badge>
+                  ) : (
+                    <span className="text-muted-foreground">{documentTypeLabels[expense.document_type]}</span>
+                  )}
                 </td>
                 <td className="px-2 py-1 text-muted-foreground whitespace-nowrap font-mono">
                   {expense.document_number ?? '—'}

@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
-import type { ExpenseStatus, UserRole } from '@/types/finance'
+import type { DocumentType, ExpenseStatus, UserRole } from '@/types/finance'
 import { isCORole } from '@/lib/finance/roles'
 
 interface Props {
@@ -21,6 +21,7 @@ interface Props {
   remainingAmount: number
   paymentMethod: 'BANK_TRANSFER' | 'CASH' | 'CARD' | 'OTHER'
   propertyId: string
+  documentType: DocumentType
 }
 
 interface BankAccountOption {
@@ -35,7 +36,7 @@ interface CashRegisterInfo {
 }
 
 export function ExpenseActions({
-  expenseId, status, userRole, isOwner, remainingAmount, paymentMethod, propertyId,
+  expenseId, status, userRole, isOwner, remainingAmount, paymentMethod, propertyId, documentType,
 }: Props) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -110,8 +111,14 @@ export function ExpenseActions({
   const canApprove = isCO && status === 'SENT_TO_CO'
   const canReturn = isCO && status === 'SENT_TO_CO'
   const canReject = isCO && status === 'SENT_TO_CO'
-  const canPay = isAdmin && (status === 'APPROVED' || status === 'UNPAID' || status === 'PARTIAL' || status === 'OVERDUE')
-  const canEdit = isCO && !['PAID', 'PARTIAL', 'REJECTED'].includes(status)
+  const isCreditNote = documentType === 'CREDIT_NOTE'
+  const canPay = isAdmin && !isCreditNote && (status === 'APPROVED' || status === 'UNPAID' || status === 'PARTIAL' || status === 'OVERDUE')
+  // Cash expenses stay editable even when PAID so that technical mistakes
+  // (wrong amount, document number) can be corrected without reversal.
+  const isCashPaid = paymentMethod === 'CASH' && status === 'PAID'
+  const editableForCO = !['PAID', 'PARTIAL', 'REJECTED'].includes(status) || isCashPaid
+  const editableForOwner = status === 'DRAFT' || status === 'RETURNED' || isCashPaid
+  const canEdit = isCO ? editableForCO : (isOwner && editableForOwner)
 
   const hasActions = canSubmit || canApprove || canReturn || canReject || canPay || canEdit
 

@@ -210,12 +210,6 @@ export function ExpenseForm({ propertyId, accounts, suppliers: initialSuppliers,
       note: note || null,
     }
 
-    // Manager paying cash: mark as paid from property cash register
-    if (isManager && paymentMethod === 'CASH') {
-      body.paid_from_cash = 'property'
-      body.mark_paid = true
-    }
-
     try {
       const url = isEdit ? `/api/finance/expenses/${initialExpense!.id}` : '/api/finance/expenses'
       const res = await fetch(url, {

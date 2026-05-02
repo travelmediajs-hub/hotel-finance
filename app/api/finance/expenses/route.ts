@@ -88,6 +88,29 @@ export async function POST(request: NextRequest) {
   if (attachment_url) insertData.attachment_url = attachment_url
   if (note) insertData.note = note
 
+  // Manager paying in cash: the cash has already left the property's register,
+  // so mark the expense PAID immediately. CO audits afterwards (RETURN/REJECT/edit).
+  if (user.role === 'MANAGER' && parsed.data.payment_method === 'CASH') {
+    const { data: register } = await supabase
+      .from('property_cash_registers')
+      .select('id')
+      .eq('property_id', parsed.data.property_id)
+      .maybeSingle()
+
+    if (!register) {
+      return NextResponse.json(
+        { error: 'no_cash_register', message: 'Обектът няма каса' },
+        { status: 400 }
+      )
+    }
+
+    insertData.status = 'PAID'
+    insertData.paid_amount = parsed.data.amount_net + parsed.data.vat_amount
+    insertData.paid_at = parsed.data.issue_date
+    insertData.paid_by_id = user.id
+    insertData.cash_register_id = register.id
+  }
+
   const { data, error } = await supabase
     .from('expenses')
     .insert(insertData)
@@ -98,8 +121,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'database_error', message: error.message, details: error.details }, { status: 500 })
   }
 
-  // Auto-create bank transaction when expense uses bank transfer
-  if (parsed.data.bank_account_id && parsed.data.payment_method === 'BANK_TRANSFER') {
+  // Auto-create bank transaction when expense uses bank transfer.
+  // Skip for credit notes — they offset an invoice and rarely involve a real payment.
+  if (
+    parsed.data.bank_account_id &&
+    parsed.data.payment_method === 'BANK_TRANSFER' &&
+    parsed.data.document_type !== 'CREDIT_NOTE'
+  ) {
     const supplier = parsed.data.supplier_id
       ? (await supabase.from('suppliers').select('name').eq('id', parsed.data.supplier_id).single()).data?.name
       : null

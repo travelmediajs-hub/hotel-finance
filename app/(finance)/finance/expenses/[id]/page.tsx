@@ -42,6 +42,7 @@ export default async function ExpenseDetailPage({
         remainingAmount={expense.remaining_amount}
         paymentMethod={expense.payment_method}
         propertyId={expense.property_id}
+        documentType={expense.document_type}
       />
     </div>
   )

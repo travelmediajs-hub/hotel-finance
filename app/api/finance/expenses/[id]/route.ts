@@ -55,9 +55,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
-  // CO roles can edit until paid; others only DRAFT/RETURNED
-  const editableForCO = !['PAID', 'PARTIAL', 'REJECTED'].includes(expense.status)
-  const editableForOwner = expense.status === 'DRAFT' || expense.status === 'RETURNED'
+  // CO roles can edit until paid; owners only DRAFT/RETURNED.
+  // Cash expenses are an exception: PAID cash is editable so technical
+  // mistakes (wrong amount, doc number) can be corrected without reversal.
+  const isCashPaid = expense.payment_method === 'CASH' && expense.status === 'PAID'
+  const editableForCO = !['PAID', 'PARTIAL', 'REJECTED'].includes(expense.status) || isCashPaid
+  const editableForOwner = expense.status === 'DRAFT' || expense.status === 'RETURNED' || isCashPaid
   if (isCO ? !editableForCO : !editableForOwner) {
     return NextResponse.json(
       { error: 'invalid_status', message: 'Разходът не може да се редактира в този статус' },
@@ -74,12 +77,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     )
   }
 
+  // For paid cash expenses, sync paid_amount with edited net/vat so the
+  // property cash register view reflects the corrected total.
+  const updateFields: Record<string, unknown> = {
+    ...parsed.data,
+    updated_at: new Date().toISOString(),
+  }
+  if (
+    isCashPaid &&
+    (parsed.data.amount_net !== undefined || parsed.data.vat_amount !== undefined)
+  ) {
+    const newNet = parsed.data.amount_net ?? Number(expense.amount_net)
+    const newVat = parsed.data.vat_amount ?? Number(expense.vat_amount)
+    updateFields.paid_amount = newNet + newVat
+  }
+
   const { data, error } = await supabase
     .from('expenses')
-    .update({
-      ...parsed.data,
-      updated_at: new Date().toISOString(),
-    })
+    .update(updateFields)
     .eq('id', id)
     .select()
     .single()
