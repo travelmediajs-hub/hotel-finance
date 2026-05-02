@@ -90,6 +90,8 @@ export async function POST(request: NextRequest) {
 
   // Manager paying in cash: the cash has already left the property's register,
   // so mark the expense PAID immediately. CO audits afterwards (RETURN/REJECT/edit).
+  // The property_cash_balances view ties expenses to the register via property_id,
+  // so no register reference is stored on the expense itself.
   if (user.role === 'MANAGER' && parsed.data.payment_method === 'CASH') {
     const { data: register } = await supabase
       .from('property_cash_registers')
@@ -108,7 +110,6 @@ export async function POST(request: NextRequest) {
     insertData.paid_amount = parsed.data.amount_net + parsed.data.vat_amount
     insertData.paid_at = parsed.data.issue_date
     insertData.paid_by_id = user.id
-    insertData.cash_register_id = register.id
   }
 
   const { data, error } = await supabase
