@@ -15,6 +15,7 @@ const statusLabels: Record<ExpenseStatus, string> = {
   PAID: 'Платен',
   OVERDUE: 'Просрочен',
   REJECTED: 'Отхвърлен',
+  RETURNED: 'Върнат',
 }
 
 const statusVariants: Record<ExpenseStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -26,6 +27,7 @@ const statusVariants: Record<ExpenseStatus, 'default' | 'secondary' | 'destructi
   PAID: 'outline',
   OVERDUE: 'destructive',
   REJECTED: 'destructive',
+  RETURNED: 'secondary',
 }
 
 const documentTypeLabels: Record<DocumentType, string> = {
